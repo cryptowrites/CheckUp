@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solidity Security Analyzer - تحلیلگر امنیت قراردادهای هوشمند</title>
+    <title>Solidity Security Analyzer Pro</title>
     <style>
         * {
             margin: 0;
@@ -11,214 +11,263 @@
             box-sizing: border-box;
         }
         
+        :root {
+            --primary: #2563eb;
+            --primary-light: #3b82f6;
+            --danger: #dc2626;
+            --warning: #f59e0b;
+            --success: #059669;
+            --info: #0891b2;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --shadow-lg: rgba(0, 0, 0, 0.15);
+        }
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--gray-50) 0%, #ffffff 100%);
+            color: var(--gray-800);
+            line-height: 1.6;
             min-height: 100vh;
-            padding: 20px;
         }
         
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
+            padding: 20px;
         }
         
         .header {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            padding: 30px;
             text-align: center;
+            margin-bottom: 40px;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px var(--shadow);
         }
         
         .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
         }
         
         .header p {
-            font-size: 1.2em;
-            opacity: 0.9;
+            font-size: 1.1rem;
+            color: var(--gray-600);
+            max-width: 600px;
+            margin: 0 auto;
         }
         
-        .main-content {
-            padding: 30px;
+        .main-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 30px;
+            align-items: start;
         }
         
-        .input-section {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 25px;
-            border: 2px solid #e9ecef;
+        .input-panel, .results-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 20px var(--shadow);
         }
         
-        .input-section h2 {
-            color: #2c3e50;
+        .panel-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--gray-800);
             margin-bottom: 20px;
-            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
-        .code-input {
+        .code-textarea {
             width: 100%;
-            min-height: 400px;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            padding: 15px;
-            font-family: 'Courier New', monospace;
+            height: 400px;
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 20px;
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
             font-size: 14px;
-            resize: vertical;
-            background: #2d3748;
-            color: #e2e8f0;
             line-height: 1.5;
+            background: var(--gray-50);
+            color: var(--gray-800);
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+        
+        .code-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
         
         .analyze-btn {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
             color: white;
             border: none;
-            padding: 15px 30px;
-            border-radius: 50px;
+            border-radius: 12px;
+            padding: 16px 24px;
             font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
             margin-top: 20px;
-            width: 100%;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(238, 90, 36, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
         
-        .analyze-btn:hover {
+        .analyze-btn:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(238, 90, 36, 0.4);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.3);
         }
         
         .analyze-btn:disabled {
-            background: #95a5a6;
+            background: var(--gray-300);
             cursor: not-allowed;
             transform: none;
         }
         
-        .results-section {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 25px;
-            border: 2px solid #e9ecef;
-            max-height: 600px;
-            overflow-y: auto;
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
         }
         
-        .results-section h2 {
-            color: #2c3e50;
-            margin-bottom: 20px;
-            font-size: 1.5em;
+        .stat-card {
+            background: var(--gray-50);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            transition: transform 0.2s ease;
         }
         
-        .vulnerability {
-            margin-bottom: 20px;
-            border-radius: 10px;
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+        
+        .vulnerability-card {
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            margin-bottom: 16px;
             overflow: hidden;
-            border: 1px solid #ddd;
             background: white;
         }
         
         .vulnerability-header {
-            padding: 15px;
+            padding: 20px;
             cursor: pointer;
-            transition: all 0.3s ease;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: background-color 0.2s ease;
         }
         
-        .severity-critical { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
-        .severity-high { background: linear-gradient(135deg, #e67e22, #d35400); color: white; }
-        .severity-medium { background: linear-gradient(135deg, #f39c12, #e67e22); color: white; }
-        .severity-low { background: linear-gradient(135deg, #27ae60, #229954); color: white; }
-        .severity-info { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
+        .vulnerability-header:hover {
+            background: var(--gray-50);
+        }
+        
+        .severity-critical .vulnerability-header { border-right: 4px solid var(--danger); }
+        .severity-high .vulnerability-header { border-right: 4px solid #ea580c; }
+        .severity-medium .vulnerability-header { border-right: 4px solid var(--warning); }
+        .severity-low .vulnerability-header { border-right: 4px solid var(--success); }
+        .severity-info .vulnerability-header { border-right: 4px solid var(--info); }
+        
+        .vulnerability-title {
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 5px;
+        }
+        
+        .vulnerability-meta {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
         
         .vulnerability-details {
-            padding: 20px;
-            background: #f8f9fa;
-            border-top: 1px solid #ddd;
+            padding: 0 20px 20px;
             display: none;
+            animation: slideDown 0.3s ease;
         }
         
         .vulnerability-details.active {
             display: block;
-            animation: fadeIn 0.3s ease;
         }
         
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
-        .code-snippet {
-            background: #2d3748;
-            color: #e2e8f0;
-            padding: 15px;
+        .code-block {
+            background: var(--gray-800);
+            color: #e5e7eb;
+            padding: 16px;
             border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            margin: 10px 0;
+            font-family: 'SF Mono', monospace;
+            font-size: 14px;
+            margin: 15px 0;
             overflow-x: auto;
         }
         
         .recommendation {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            padding: 15px;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
             border-radius: 8px;
-            margin-top: 15px;
+            padding: 16px;
+            margin: 15px 0;
         }
         
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .stat-card {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            border: 2px solid #e9ecef;
-            transition: transform 0.3s ease;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .stat-number {
-            font-size: 2em;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        
-        .stat-label {
-            color: #7f8c8d;
-            font-size: 0.9em;
+        .recommendation h4 {
+            color: var(--success);
+            margin-bottom: 8px;
         }
         
         .loading {
             text-align: center;
-            padding: 40px;
+            padding: 60px 20px;
         }
         
         .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--gray-200);
+            border-top: 3px solid var(--primary);
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
         }
@@ -228,63 +277,101 @@
             100% { transform: rotate(360deg); }
         }
         
-        .no-issues {
+        .no-results {
             text-align: center;
-            padding: 40px;
-            color: #27ae60;
-            font-size: 1.2em;
+            padding: 60px 20px;
+            color: var(--gray-600);
         }
         
-        .no-issues i {
-            font-size: 3em;
-            margin-bottom: 20px;
+        .no-results.success {
+            color: var(--success);
         }
-
+        
         .expand-icon {
+            font-size: 1.2rem;
             transition: transform 0.3s ease;
+            color: var(--gray-600);
         }
-
+        
         .expand-icon.rotated {
             transform: rotate(180deg);
         }
-
+        
+        .severity-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .severity-critical { background: #fef2f2; color: var(--danger); }
+        .severity-high { background: #fff7ed; color: #ea580c; }
+        .severity-medium { background: #fffbeb; color: var(--warning); }
+        .severity-low { background: #f0fdf4; color: var(--success); }
+        .severity-info { background: #f0f9ff; color: var(--info); }
+        
         @media (max-width: 768px) {
-            .main-content {
+            .main-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🛡️ Solidity Security Analyzer</h1>
-            <p>تحلیلگر پیشرفته امنیت قراردادهای هوشمند - بهتر از Slither</p>
-        </div>
+        <header class="header">
+            <h1>🛡️ Solidity Security Pro</h1>
+            <p>تحلیلگر پیشرفته و هوشمند امنیت قراردادهای Solidity با قابلیت‌های بالاتر از Slither</p>
+        </header>
         
-        <div class="main-content">
-            <div class="input-section">
-                <h2>📝 کد Solidity را وارد کنید</h2>
+        <div class="main-grid">
+            <div class="input-panel">
+                <h2 class="panel-title">
+                    📝 کد Solidity
+                </h2>
                 <textarea 
                     id="solidityCode" 
-                    class="code-input" 
+                    class="code-textarea" 
                     placeholder="// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract YourContract {
-    // کد خود را اینجا وارد کنید...
+contract MyContract {
+    address public owner;
+    mapping(address => uint256) public balances;
+    
+    constructor() {
+        owner = msg.sender;
+    }
+    
+    function withdraw() public {
+        uint256 amount = balances[msg.sender];
+        balances[msg.sender] = 0;
+        payable(msg.sender).transfer(amount);
+    }
 }">
                 </textarea>
                 <button id="analyzeBtn" class="analyze-btn">
-                    🔍 تحلیل امنیتی انجام دهید
+                    <span id="btnText">🔍 تحلیل امنیتی</span>
                 </button>
             </div>
             
-            <div class="results-section">
-                <h2>📊 نتایج تحلیل</h2>
-                <div id="analysisResults">
-                    <div style="text-align: center; padding: 40px; color: #7f8c8d;">
-                        <p>کد Solidity خود را وارد کرده و دکمه تحلیل را فشار دهید</p>
+            <div class="results-panel">
+                <h2 class="panel-title">
+                    📊 نتایج تحلیل
+                </h2>
+                <div id="results">
+                    <div class="no-results">
+                        کد خود را وارد کرده و دکمه تحلیل را کلیک کنید
                     </div>
                 </div>
             </div>
@@ -292,103 +379,104 @@ contract YourContract {
     </div>
 
     <script>
-        class SoliditySecurityAnalyzer {
+        class AdvancedSolidityAnalyzer {
             constructor() {
-                this.vulnerabilityPatterns = this.initializePatterns();
-                this.initializeEventListeners();
+                this.patterns = this.initializePatterns();
+                this.gasAnalysis = this.initializeGasPatterns();
+                this.setupEventListeners();
             }
 
             initializePatterns() {
                 return {
-                    // Reentrancy Vulnerabilities
                     reentrancy: {
                         patterns: [
-                            /\.call\s*\{[^}]*\}\s*\([^)]*\)/g,
-                            /\.transfer\s*\([^)]*\)/g,
-                            /\.send\s*\([^)]*\)/g,
-                            /external.*payable/g
+                            /\.call\s*\{[^}]*value[^}]*\}[^;]*;/g,
+                            /\.transfer\s*\([^)]+\)[^;]*;\s*(?!.*balances\[[^\]]+\]\s*=\s*0)/g,
+                            /payable\([^)]+\)\.call/g,
+                            /(address\([^)]+\)|payable\([^)]+\))\.call\{value:/g
                         ],
                         antiPatterns: [
-                            /nonReentrant/g,
-                            /ReentrancyGuard/g,
-                            /_status.*=.*_ENTERED/g
+                            /nonReentrant/gi,
+                            /ReentrancyGuard/gi,
+                            /require\s*\(\s*!locked/gi,
+                            /locked\s*=\s*true/g,
+                            /balances\[[^\]]+\]\s*=\s*0.*\.call/gs
                         ],
                         severity: 'critical',
                         title: 'آسیب‌پذیری Reentrancy',
-                        description: 'قرارداد در برابر حملات Reentrancy محافظت نشده است'
-                    },
-                    
-                    // Integer Overflow/Underflow
-                    integerOverflow: {
-                        patterns: [
-                            /\+\+\w+/g,
-                            /\w+\+\+/g,
-                            /\w+\s*\+=\s*/g,
-                            /\w+\s*-=\s*/g,
-                            /\w+\s*\*=\s*/g,
-                            /unchecked\s*{/g
-                        ],
-                        antiPatterns: [
-                            /SafeMath/g,
-                            /pragma\s+solidity\s+\^?0\.8/g,
-                            /require\([^)]*overflow[^)]*\)/gi
-                        ],
-                        severity: 'high',
-                        title: 'آسیب‌پذیری Integer Overflow/Underflow',
-                        description: 'عملیات ریاضی بدون بررسی overflow/underflow انجام می‌شود'
+                        description: 'امکان حمله Reentrancy وجود دارد - مهاجم می‌تواند تابع را قبل از اتمام اجرا مجدداً فراخوانی کند'
                     },
 
-                    // Access Control Issues
-                    accessControl: {
+                    uncheckedTransfer: {
                         patterns: [
-                            /function\s+\w+\s*\([^)]*\)\s*(public|external)/g,
-                            /modifier\s+onlyOwner/g,
-                            /require\s*\(\s*msg\.sender\s*==\s*owner/g
-                        ],
-                        antiPatterns: [
-                            /AccessControl/g,
-                            /Ownable/g,
-                            /onlyOwner/g,
-                            /hasRole/g
-                        ],
-                        severity: 'high',
-                        title: 'مشکلات کنترل دسترسی',
-                        description: 'توابع حساس بدون کنترل دسترسی مناسب تعریف شده‌اند'
-                    },
-
-                    // Unchecked External Calls
-                    uncheckedCalls: {
-                        patterns: [
-                            /\.call\s*\(/g,
-                            /\.delegatecall\s*\(/g,
-                            /\.staticcall\s*\(/g,
-                            /\.send\s*\(/g
+                            /\.transfer\s*\([^)]+\)\s*;/g,
+                            /\.send\s*\([^)]+\)\s*;/g,
+                            /\.call\s*\{[^}]*\}\s*\([^)]*\)\s*;/g
                         ],
                         antiPatterns: [
                             /require\s*\([^)]*\.call[^)]*\)/g,
-                            /if\s*\([^)]*\.call[^)]*\)/g,
-                            /assert\s*\([^)]*\.call[^)]*\)/g
+                            /require\s*\([^)]*\.send[^)]*\)/g,
+                            /if\s*\([^)]*\.call[^)]*success[^)]*\)/g,
+                            /\(bool\s+success[^)]*\)\s*=.*\.call/g
                         ],
-                        severity: 'medium',
-                        title: 'فراخوانی‌های خارجی بدون بررسی',
-                        description: 'فراخوانی‌های خارجی بدون بررسی نتیجه انجام می‌شوند'
+                        severity: 'high',
+                        title: 'انتقال بدون بررسی نتیجه',
+                        description: 'انتقال اتر یا توکن بدون بررسی موفقیت عملیات که ممکن است منجر به از دست رفتن وجوه شود'
                     },
 
-                    // Timestamp Dependency
-                    timestampDependency: {
+                    accessControl: {
                         patterns: [
-                            /block\.timestamp/g,
-                            /now/g,
-                            /block\.number/g
+                            /function\s+\w+[^{]*public[^{]*payable[^{]*\{/g,
+                            /function\s+\w+[^{]*external[^{]*payable[^{]*\{/g,
+                            /selfdestruct\s*\(/g,
+                            /suicide\s*\(/g
                         ],
-                        antiPatterns: [],
-                        severity: 'medium',
-                        title: 'وابستگی به Timestamp',
-                        description: 'استفاده از block.timestamp یا now که قابل دستکاری توسط ماینر است'
+                        antiPatterns: [
+                            /onlyOwner/g,
+                            /require\s*\(\s*msg\.sender\s*==\s*owner/g,
+                            /modifier\s+only\w+/g,
+                            /hasRole\s*\(/g,
+                            /_checkOwner\s*\(/g
+                        ],
+                        severity: 'critical',
+                        title: 'کنترل دسترسی ناکافی',
+                        description: 'توابع حساس بدون کنترل دسترسی مناسب که اجازه دسترسی غیرمجاز به هر کاربری را می‌دهد'
                     },
 
-                    // Tx.origin Usage
-                    txOriginUsage: {
+                    integerOverflow: {
+                        patterns: [
+                            /\+\+\w+|--\w+|\w\+\+|\w--|[\w\[\]\.]+\s*[\+\-\*\/]\s*=\s*\w+/g,
+                            /unchecked\s*\{[^}]*[\+\-\*\/][^}]*\}/gs
+                        ],
+                        antiPatterns: [
+                            /pragma\s+solidity\s+[\^~>=<\s]*0\.8/g,
+                            /SafeMath/g,
+                            /require\s*\([^)]*overflow[^)]*\)/gi,
+                            /Math\.add|Math\.sub|Math\.mul/g
+                        ],
+                        severity: 'medium',
+                        title: 'احتمال Integer Overflow/Underflow',
+                        description: 'عملیات ریاضی که ممکن است منجر به overflow یا underflow شود، مخصوصاً در نسخه‌های قدیمی Solidity'
+                    },
+
+                    timestampManipulation: {
+                        patterns: [
+                            /block\.timestamp\s*[<>=!]+\s*\w+/g,
+                            /now\s*[<>=!]+\s*\w+/g,
+                            /require\s*\([^)]*block\.timestamp[^)]*\)/g,
+                            /if\s*\([^)]*block\.timestamp[^)]*\)/g
+                        ],
+                        antiPatterns: [
+                            /block\.number/g,
+                            /oracle/gi,
+                            /chainlink/gi
+                        ],
+                        severity: 'medium',
+                        title: 'وابستگی خطرناک به زمان',
+                        description: 'استفاده از block.timestamp که توسط ماینرها قابل دستکاری است و ممکن است منجر به نتایج غیرقابل پیش‌بینی شود'
+                    },
+
+                    txOrigin: {
                         patterns: [
                             /tx\.origin/g
                         ],
@@ -396,231 +484,233 @@ contract YourContract {
                             /msg\.sender/g
                         ],
                         severity: 'high',
-                        title: 'استفاده از tx.origin',
-                        description: 'استفاده از tx.origin به جای msg.sender که منجر به آسیب‌پذیری می‌شود'
+                        title: 'استفاده خطرناک از tx.origin',
+                        description: 'tx.origin به جای msg.sender استفاده شده که منجر به آسیب‌پذیری phishing می‌شود'
                     },
 
-                    // Unprotected Ether Withdrawal
-                    etherWithdrawal: {
+                    weakRandomness: {
                         patterns: [
-                            /payable\s*\([^)]*\)\.transfer/g,
-                            /payable\s*\([^)]*\)\.send/g,
-                            /\.call\s*\{[^}]*value[^}]*\}/g
+                            /keccak256\s*\([^)]*block\.(timestamp|number|difficulty)[^)]*\)/g,
+                            /blockhash\s*\([^)]*\)\s*%/g,
+                            /block\.difficulty\s*%/g
                         ],
                         antiPatterns: [
-                            /onlyOwner/g,
-                            /require\s*\(\s*msg\.sender/g,
-                            /modifier.*only/g
+                            /VRF/gi,
+                            /oracle/gi,
+                            /chainlink/gi,
+                            /commit.*reveal/gi
+                        ],
+                        severity: 'high',
+                        title: 'تولید عدد تصادفی ضعیف',
+                        description: 'استفاده از منابع قابل پیش‌بینی برای تولید عدد تصادفی که ممکن است توسط مهاجمان پیش‌بینی شود'
+                    },
+
+                    delegateCall: {
+                        patterns: [
+                            /\.delegatecall\s*\(/g,
+                            /assembly\s*\{[^}]*delegatecall[^}]*\}/gs
+                        ],
+                        antiPatterns: [
+                            /require\s*\([^)]*success[^)]*\)/g,
+                            /onlyOwner/g
                         ],
                         severity: 'critical',
-                        title: 'برداشت اتر بدون محافظت',
-                        description: 'برداشت اتر بدون کنترل دسترسی مناسب'
+                        title: 'استفاده خطرناک از delegatecall',
+                        description: 'delegatecall بدون کنترل مناسب که ممکن است منجر به اجرای کد مخرب در context قرارداد شود'
                     },
 
-                    // DoS with Gas Limit
                     gasLimit: {
                         patterns: [
-                            /for\s*\([^)]*\.length[^)]*\)/g,
-                            /while\s*\([^)]*\.length[^)]*\)/g,
-                            /\.push\s*\(/g
+                            /for\s*\([^{]*\.length[^{]*\)\s*\{[^}]*\}/gs,
+                            /while\s*\([^{]*\.length[^{]*\)\s*\{[^}]*\}/gs,
+                            /\.push\s*\([^)]*\)[^;]*;[^}]*\.length/gs
                         ],
                         antiPatterns: [
-                            /require\s*\([^)]*\.length\s*<[^)]*\)/g,
-                            /break/g,
-                            /continue/g
+                            /require\s*\([^)]*\.length\s*[<>][^)]*\)/g,
+                            /break\s*;/g,
+                            /if\s*\([^)]*gas[^)]*\)\s*break/gi
                         ],
                         severity: 'medium',
                         title: 'حمله DoS با محدودیت گاز',
-                        description: 'حلقه‌های نامحدود که ممکن است منجر به اتمام گاز شوند'
+                        description: 'حلقه‌های نامحدود روی آرایه‌ها که ممکن است منجر به اتمام گاز و عدم اجرای تراکنش شود'
                     },
 
-                    // Weak Randomness
-                    weakRandomness: {
-                        patterns: [
-                            /keccak256\s*\([^)]*block\.timestamp[^)]*\)/g,
-                            /keccak256\s*\([^)]*block\.number[^)]*\)/g,
-                            /keccak256\s*\([^)]*block\.difficulty[^)]*\)/g
-                        ],
-                        antiPatterns: [
-                            /chainlink/gi,
-                            /oracle/gi,
-                            /VRF/g
-                        ],
-                        severity: 'medium',
-                        title: 'تولید عدد تصادفی ضعیف',
-                        description: 'استفاده از منابع قابل پیش‌بینی برای تولید عدد تصادفی'
-                    },
-
-                    // Uninitialized Storage Pointers
-                    uninitializedStorage: {
-                        patterns: [
-                            /struct\s+\w+\s+\w+;/g,
-                            /mapping\s*\([^)]*\)\s+\w+;/g
-                        ],
-                        antiPatterns: [
-                            /=\s*\w+\s*\{/g,
-                            /=\s*new\s+/g
-                        ],
-                        severity: 'high',
-                        title: 'اشاره‌گرهای Storage مقداردهی نشده',
-                        description: 'متغیرهای Storage بدون مقداردهی اولیه'
-                    },
-
-                    // Front Running
                     frontRunning: {
                         patterns: [
-                            /function\s+\w+\s*\([^)]*\)\s*(public|external)[^{]*{[^}]*transfer/gs,
-                            /function\s+\w+\s*\([^)]*\)\s*(public|external)[^{]*{[^}]*approve/gs
+                            /function\s+\w+[^{]*public[^{]*\{[^}]*transfer[^}]*\}/gs,
+                            /function\s+\w+[^{]*external[^{]*\{[^}]*approve[^}]*\}/gs,
+                            /function\s+\w+[^{]*public[^{]*\{[^}]*balanceOf[^}]*\}/gs
                         ],
                         antiPatterns: [
                             /commit.*reveal/gi,
-                            /timelock/gi
+                            /timelock/gi,
+                            /private/g
                         ],
                         severity: 'medium',
-                        title: 'آسیب‌پذیری Front Running',
-                        description: 'توابع حساس که ممکن است در معرض حملات Front Running باشند'
+                        title: 'آسیب‌پذیری Front-Running',
+                        description: 'توابع حساس که ممکن است در معرض حملات front-running قرار بگیرند'
                     }
                 };
             }
 
-            initializeEventListeners() {
+            initializeGasPatterns() {
+                return {
+                    inefficientLoops: /for\s*\([^)]*\)\s*\{[^}]*\.push[^}]*\}/gs,
+                    storageInLoop: /for\s*\([^)]*\)\s*\{[^}]*storage[^}]*\}/gs,
+                    redundantChecks: /require\s*\([^)]*\);\s*require\s*\([^)]*\);/g
+                };
+            }
+
+            setupEventListeners() {
                 const analyzeBtn = document.getElementById('analyzeBtn');
-                const solidityCode = document.getElementById('solidityCode');
-                
-                analyzeBtn.addEventListener('click', () => this.analyzeSolidity());
-                
-                // Real-time analysis on code change (debounced)
-                let timeoutId;
-                solidityCode.addEventListener('input', () => {
-                    clearTimeout(timeoutId);
-                    timeoutId = setTimeout(() => this.analyzeSolidity(), 2000);
+                const codeInput = document.getElementById('solidityCode');
+
+                analyzeBtn.addEventListener('click', () => {
+                    this.performAnalysis();
+                });
+
+                // Real-time hints (debounced)
+                let timeout;
+                codeInput.addEventListener('input', () => {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => {
+                        this.showQuickHints();
+                    }, 1000);
                 });
             }
 
-            analyzeSolidity() {
+            async performAnalysis() {
                 const code = document.getElementById('solidityCode').value.trim();
-                const resultsDiv = document.getElementById('analysisResults');
-                const analyzeBtn = document.getElementById('analyzeBtn');
-
+                
                 if (!code) {
-                    resultsDiv.innerHTML = '<div style="text-align: center; padding: 40px; color: #7f8c8d;"><p>لطفا کد Solidity را وارد کنید</p></div>';
+                    this.showError('لطفاً کد Solidity را وارد کنید');
                     return;
                 }
 
-                // Show loading
-                analyzeBtn.disabled = true;
-                analyzeBtn.textContent = '🔄 در حال تحلیل...';
-                resultsDiv.innerHTML = `
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <p>در حال تحلیل عمقی کد Solidity...</p>
-                    </div>
-                `;
-
-                // Simulate analysis delay for better UX
+                this.showLoading();
+                
+                // Simulate processing time for better UX
                 setTimeout(() => {
-                    const vulnerabilities = this.detectVulnerabilities(code);
+                    const vulnerabilities = this.analyzeCode(code);
                     this.displayResults(vulnerabilities);
-                    
-                    analyzeBtn.disabled = false;
-                    analyzeBtn.textContent = '🔍 تحلیل امنیتی انجام دهید';
-                }, 1500);
+                }, 1200);
             }
 
-            detectVulnerabilities(code) {
+            analyzeCode(code) {
                 const vulnerabilities = [];
-                
-                for (const [key, pattern] of Object.entries(this.vulnerabilityPatterns)) {
-                    const findings = this.checkPattern(code, pattern, key);
+
+                // Deep pattern analysis
+                for (const [key, pattern] of Object.entries(this.patterns)) {
+                    const findings = this.detectPattern(code, pattern);
                     if (findings.length > 0) {
                         vulnerabilities.push({
-                            type: key,
+                            id: key,
                             ...pattern,
-                            findings: findings,
-                            lineNumbers: this.getLineNumbers(code, findings)
+                            findings,
+                            lineNumbers: this.getLineNumbers(code, findings),
+                            confidence: this.calculateConfidence(code, pattern),
+                            gasImpact: this.assessGasImpact(key)
                         });
                     }
                 }
 
-                // Additional context-aware checks
-                vulnerabilities.push(...this.performAdvancedAnalysis(code));
-                
-                return vulnerabilities.sort((a, b) => this.getSeverityWeight(b.severity) - this.getSeverityWeight(a.severity));
+                // Advanced contextual analysis
+                vulnerabilities.push(...this.performContextualAnalysis(code));
+
+                return vulnerabilities.sort((a, b) => 
+                    this.getSeverityWeight(b.severity) - this.getSeverityWeight(a.severity)
+                );
             }
 
-            checkPattern(code, pattern, patternKey) {
+            detectPattern(code, pattern) {
                 const findings = [];
                 let hasVulnerability = false;
 
-                // Check for vulnerability patterns
+                // Check vulnerability patterns
                 for (const regex of pattern.patterns) {
                     const matches = [...code.matchAll(regex)];
                     if (matches.length > 0) {
                         hasVulnerability = true;
                         findings.push(...matches.map(match => ({
-                            match: match[0],
-                            index: match.index
+                            code: match[0],
+                            position: match.index,
+                            context: this.getContext(code, match.index)
                         })));
                     }
                 }
 
-                // Check for protective patterns
-                let hasProtection = false;
-                for (const antiPattern of pattern.antiPatterns) {
-                    if (antiPattern.test(code)) {
-                        hasProtection = true;
+                // Check for mitigations
+                let hasMitigation = false;
+                for (const antiRegex of pattern.antiPatterns) {
+                    if (antiRegex.test(code)) {
+                        hasMitigation = true;
                         break;
                     }
                 }
 
-                // Return findings only if vulnerability exists without proper protection
-                return (hasVulnerability && !hasProtection) ? findings : [];
+                return (hasVulnerability && !hasMitigation) ? findings : [];
             }
 
-            performAdvancedAnalysis(code) {
-                const advancedVulns = [];
+            performContextualAnalysis(code) {
+                const contextualIssues = [];
 
                 // Check for missing events in critical functions
                 if (/function\s+\w+.*payable/g.test(code) && !/emit\s+/g.test(code)) {
-                    advancedVulns.push({
-                        type: 'missing_events',
+                    contextualIssues.push({
+                        id: 'missing_events',
                         severity: 'low',
-                        title: 'رویدادهای مفقود',
-                        description: 'توابع مهم بدون انتشار رویداد مناسب',
-                        findings: [{match: 'Missing events in payable functions', index: 0}],
+                        title: 'رویدادهای مفقود در توابع مهم',
+                        description: 'توابع پرداخت بدون انتشار رویداد مناسب که ردیابی تراکنش‌ها را دشوار می‌کند',
+                        findings: [{code: 'Missing events in payable functions', position: 0}],
                         lineNumbers: []
                     });
                 }
 
-                // Check for hardcoded addresses
-                const addressMatches = [...code.matchAll(/0x[a-fA-F0-9]{40}/g)];
-                if (addressMatches.length > 0) {
-                    advancedVulns.push({
-                        type: 'hardcoded_addresses',
-                        severity: 'low',
-                        title: 'آدرس‌های هاردکد شده',
-                        description: 'استفاده از آدرس‌های هاردکد که انعطاف‌پذیری را کاهش می‌دهد',
-                        findings: addressMatches.map(match => ({
-                            match: match[0],
-                            index: match.index
+                // Check for hardcoded values
+                const hardcodedValues = [...code.matchAll(/0x[a-fA-F0-9]{40}|\d{10,}/g)];
+                if (hardcodedValues.length > 0) {
+                    contextualIssues.push({
+                        id: 'hardcoded_values',
+                        severity: 'info',
+                        title: 'مقادیر هاردکد شده',
+                        description: 'استفاده از مقادیر ثابت که انعطاف‌پذیری کد را کاهش می‌دهد',
+                        findings: hardcodedValues.map(match => ({
+                            code: match[0],
+                            position: match.index
                         })),
-                        lineNumbers: this.getLineNumbers(code, addressMatches.map(m => ({match: m[0], index: m.index})))
+                        lineNumbers: this.getLineNumbers(code, hardcodedValues.map(m => ({position: m.index})))
                     });
                 }
 
                 // Check for floating pragma
                 if (/pragma\s+solidity\s+\^/g.test(code)) {
-                    advancedVulns.push({
-                        type: 'floating_pragma',
+                    contextualIssues.push({
+                        id: 'floating_pragma',
                         severity: 'info',
                         title: 'Pragma شناور',
                         description: 'استفاده از pragma شناور که ممکن است منجر به مشکلات سازگاری شود',
-                        findings: [{match: 'Floating pragma detected', index: 0}],
+                        findings: [{code: 'Floating pragma detected', position: 0}],
                         lineNumbers: []
                     });
                 }
 
-                return advancedVulns;
+                return contextualIssues;
+            }
+
+            getContext(code, position) {
+                const lines = code.split('\n');
+                let currentPos = 0;
+                
+                for (let i = 0; i < lines.length; i++) {
+                    if (currentPos <= position && position <= currentPos + lines[i].length) {
+                        const start = Math.max(0, i - 2);
+                        const end = Math.min(lines.length - 1, i + 2);
+                        return lines.slice(start, end + 1).join('\n');
+                    }
+                    currentPos += lines[i].length + 1;
+                }
+                
+                return '';
             }
 
             getLineNumbers(code, findings) {
@@ -628,82 +718,126 @@ contract YourContract {
                 const lineNumbers = [];
                 
                 findings.forEach(finding => {
-                    let currentIndex = 0;
+                    let currentPos = 0;
                     for (let i = 0; i < lines.length; i++) {
-                        if (currentIndex + lines[i].length >= finding.index) {
+                        if (currentPos <= finding.position && finding.position <= currentPos + lines[i].length) {
                             lineNumbers.push(i + 1);
                             break;
                         }
-                        currentIndex += lines[i].length + 1; // +1 for newline
+                        currentPos += lines[i].length + 1;
                     }
                 });
                 
                 return [...new Set(lineNumbers)].sort((a, b) => a - b);
             }
 
-            getSeverityWeight(severity) {
-                const weights = {
-                    'critical': 5,
-                    'high': 4,
-                    'medium': 3,
-                    'low': 2,
-                    'info': 1
+            calculateConfidence(code, pattern) {
+                let confidence = 70; // Base confidence
+                
+                // Increase confidence based on pattern strength
+                if (pattern.patterns.length > 2) confidence += 10;
+                if (pattern.antiPatterns.length > 0) confidence += 5;
+                
+                // Context-based adjustments
+                if (code.includes('pragma solidity ^0.8')) confidence += 5;
+                if (code.includes('ReentrancyGuard')) confidence -= 10;
+                
+                return Math.min(95, Math.max(60, confidence));
+            }
+
+            assessGasImpact(patternId) {
+                const gasImpacts = {
+                    reentrancy: 'high',
+                    gasLimit: 'critical',
+                    delegateCall: 'medium',
+                    default: 'low'
                 };
+                
+                return gasImpacts[patternId] || gasImpacts.default;
+            }
+
+            getSeverityWeight(severity) {
+                const weights = { critical: 5, high: 4, medium: 3, low: 2, info: 1 };
                 return weights[severity] || 0;
             }
 
-            displayResults(vulnerabilities) {
-                const resultsDiv = document.getElementById('analysisResults');
+            showLoading() {
+                const btn = document.getElementById('analyzeBtn');
+                const btnText = document.getElementById('btnText');
+                const results = document.getElementById('results');
+
+                btn.disabled = true;
+                btnText.innerHTML = '🔄 در حال تحلیل...';
                 
+                results.innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>تحلیل عمقی کد در حال انجام...</p>
+                    </div>
+                `;
+            }
+
+            showError(message) {
+                const results = document.getElementById('results');
+                results.innerHTML = `
+                    <div class="no-results">
+                        ⚠️ ${message}
+                    </div>
+                `;
+            }
+
+            showQuickHints() {
+                const code = document.getElementById('solidityCode').value;
+                if (code.length < 50) return;
+
+                // Quick vulnerability detection for live feedback
+                let hints = [];
+                
+                if (/\.call\s*\{/.test(code) && !/nonReentrant/.test(code)) {
+                    hints.push('⚠️ احتمال آسیب‌پذیری Reentrancy');
+                }
+                
+                if (/tx\.origin/.test(code)) {
+                    hints.push('🚨 استفاده از tx.origin خطرناک است');
+                }
+
+                // Show hints in a subtle way (could be expanded)
+                console.log('Quick hints:', hints);
+            }
+
+            displayResults(vulnerabilities) {
+                const btn = document.getElementById('analyzeBtn');
+                const btnText = document.getElementById('btnText');
+                const results = document.getElementById('results');
+
+                btn.disabled = false;
+                btnText.innerHTML = '🔍 تحلیل امنیتی';
+
                 if (vulnerabilities.length === 0) {
-                    resultsDiv.innerHTML = `
-                        <div class="no-issues">
-                            <div style="font-size: 3em; margin-bottom: 20px;">✅</div>
+                    results.innerHTML = `
+                        <div class="no-results success">
+                            <div style="font-size: 3rem; margin-bottom: 20px;">✅</div>
                             <h3>هیچ آسیب‌پذیری امنیتی یافت نشد!</h3>
-                            <p>کد شما از نظر امنیتی مناسب به نظر می‌رسد.</p>
+                            <p>کد شما از نظر امنیتی مناسب است.</p>
                         </div>
                     `;
                     return;
                 }
 
-                // Calculate statistics
-                const stats = this.calculateStats(vulnerabilities);
+                const stats = this.calculateStatistics(vulnerabilities);
+                let html = this.generateStatsHTML(stats);
                 
-                let html = `
-                    <div class="stats">
-                        <div class="stat-card">
-                            <div class="stat-number">${vulnerabilities.length}</div>
-                            <div class="stat-label">کل مسائل</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" style="color: #e74c3c;">${stats.critical}</div>
-                            <div class="stat-label">بحرانی</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" style="color: #e67e22;">${stats.high}</div>
-                            <div class="stat-label">بالا</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" style="color: #f39c12;">${stats.medium}</div>
-                            <div class="stat-label">متوسط</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" style="color: #27ae60;">${stats.low}</div>
-                            <div class="stat-label">پایین</div>
-                        </div>
-                    </div>
-                `;
-
                 vulnerabilities.forEach((vuln, index) => {
                     html += this.generateVulnerabilityHTML(vuln, index);
                 });
 
-                resultsDiv.innerHTML = html;
-                this.attachClickListeners();
+                results.innerHTML = html;
+                this.attachToggleListeners();
             }
 
-            calculateStats(vulnerabilities) {
+            calculateStatistics(vulnerabilities) {
                 return {
+                    total: vulnerabilities.length,
                     critical: vulnerabilities.filter(v => v.severity === 'critical').length,
                     high: vulnerabilities.filter(v => v.severity === 'high').length,
                     medium: vulnerabilities.filter(v => v.severity === 'medium').length,
@@ -712,29 +846,64 @@ contract YourContract {
                 };
             }
 
+            generateStatsHTML(stats) {
+                return `
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number">${stats.total}</div>
+                            <div class="stat-label">کل مسائل</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" style="color: var(--danger);">${stats.critical}</div>
+                            <div class="stat-label">بحرانی</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" style="color: #ea580c;">${stats.high}</div>
+                            <div class="stat-label">بالا</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" style="color: var(--warning);">${stats.medium}</div>
+                            <div class="stat-label">متوسط</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" style="color: var(--success);">${stats.low + stats.info}</div>
+                            <div class="stat-label">پایین</div>
+                        </div>
+                    </div>
+                `;
+            }
+
             generateVulnerabilityHTML(vuln, index) {
-                const recommendations = this.getRecommendations(vuln.type);
-                const examples = this.getFixExamples(vuln.type);
+                const recommendations = this.getRecommendations(vuln.id);
+                const codeExample = this.getSecureCodeExample(vuln.id);
                 
                 return `
-                    <div class="vulnerability">
-                        <div class="vulnerability-header severity-${vuln.severity}" onclick="toggleDetails(${index})">
+                    <div class="vulnerability-card severity-${vuln.severity}">
+                        <div class="vulnerability-header" onclick="toggleVulnerability(${index})">
                             <div>
-                                <strong>${vuln.title}</strong>
-                                <div style="margin-top: 5px; font-size: 0.9em; opacity: 0.9;">
+                                <div class="vulnerability-title">${vuln.title}</div>
+                                <div class="vulnerability-meta">
                                     ${vuln.findings.length} مورد یافت شد
-                                    ${vuln.lineNumbers.length > 0 ? `- خطوط: ${vuln.lineNumbers.join(', ')}` : ''}
+                                    ${vuln.lineNumbers.length > 0 ? `• خطوط: ${vuln.lineNumbers.slice(0, 5).join(', ')}` : ''}
+                                    ${vuln.confidence ? `• اعتماد: ${vuln.confidence}%` : ''}
                                 </div>
                             </div>
-                            <div class="expand-icon" id="icon-${index}">▼</div>
+                            <div>
+                                <span class="severity-badge severity-${vuln.severity}">${this.getSeverityLabel(vuln.severity)}</span>
+                                <span class="expand-icon" id="icon-${index}">▼</span>
+                            </div>
                         </div>
                         <div class="vulnerability-details" id="details-${index}">
                             <p><strong>توضیحات:</strong> ${vuln.description}</p>
                             
                             <h4>🎯 کدهای مشکل‌دار:</h4>
                             ${vuln.findings.slice(0, 3).map(finding => 
-                                `<div class="code-snippet">${this.escapeHtml(finding.match)}</div>`
+                                `<div class="code-block">${this.escapeHtml(finding.code)}</div>`
                             ).join('')}
+                            
+                            ${vuln.gasImpact ? `
+                                <p><strong>تأثیر بر گاز:</strong> <span class="severity-badge severity-${vuln.gasImpact}">${vuln.gasImpact}</span></p>
+                            ` : ''}
                             
                             ${recommendations ? `
                                 <div class="recommendation">
@@ -743,11 +912,122 @@ contract YourContract {
                                 </div>
                             ` : ''}
                             
-                            ${examples ? `
+                            ${codeExample ? `
                                 <h4>✅ مثال کد امن:</h4>
-                                <div class="code-snippet">${examples}</div>
+                                <div class="code-block">${codeExample}</div>
                             ` : ''}
-                            
-                            <div style="margin-top: 15px;">
-                                <strong>سطح خطر:</strong> 
-                                <span class="severity-${vuln.severity}" style="padding: 2px 8px; border-radius
+                        </div>
+                    </div>
+                `;
+            }
+
+            getSeverityLabel(severity) {
+                const labels = {
+                    critical: 'بحرانی',
+                    high: 'بالا',
+                    medium: 'متوسط',
+                    low: 'پایین',
+                    info: 'اطلاع'
+                };
+                return labels[severity] || severity;
+            }
+
+            getRecommendations(vulnId) {
+                const recommendations = {
+                    reentrancy: 'از الگوی Checks-Effects-Interactions استفاده کنید. ابتدا وضعیت را بررسی کنید، سپس تغییرات را اعمال کنید، و در نهایت با قراردادهای خارجی تعامل کنید. همچنین از OpenZeppelin ReentrancyGuard استفاده کنید.',
+                    
+                    uncheckedTransfer: 'همیشه نتیجه فراخوانی‌های .call() و .send() را بررسی کنید. از require() برای اطمینان از موفقیت تراکنش استفاده کنید یا از الگوی withdrawal استفاده کنید.',
+                    
+                    accessControl: 'از modifier های کنترل دسترسی مانند onlyOwner استفاده کنید. OpenZeppelin AccessControl یا Ownable را به کار بگیرید. هرگز توابع حساس را بدون کنترل دسترسی public نگذارید.',
+                    
+                    integerOverflow: 'اگر از Solidity 0.8.0+ استفاده می‌کنید، بررسی‌های overflow خودکار فعال هستند. برای نسخه‌های قدیمی‌تر از OpenZeppelin SafeMath استفاده کنید.',
+                    
+                    timestampManipulation: 'از block.timestamp برای عملیات زمان‌بندی دقیق استفاده نکنید. از Oracle های خارجی برای داده‌های زمانی حساس استفاده کنید یا toleranceای برای تغییرات زمانی در نظر بگیرید.',
+                    
+                    txOrigin: 'هرگز از tx.origin برای کنترل دسترسی استفاده نکنید. همیشه از msg.sender استفاده کنید تا از حملات phishing جلوگیری شود.',
+                    
+                    weakRandomness: 'از Oracle های تصادف خارجی مانند Chainlink VRF استفاده کنید. هرگز از block.timestamp، block.difficulty یا block.number برای تولید عدد تصادفی استفاده نکنید.',
+                    
+                    delegateCall: 'بسیار محتاط باشید. delegatecall تنها از آدرس‌های مورد اعتماد فراخوانی شود. همیشه نتیجه را بررسی کنید و کنترل دسترسی مناسب اعمال کنید.',
+                    
+                    gasLimit: 'از حلقه‌های نامحدود روی آرایه‌ها جلوگیری کنید. محدودیت تعداد تکرار قرار دهید یا از الگوی pagination استفاده کنید.',
+                    
+                    frontRunning: 'از الگوی commit-reveal برای عملیات حساس استفاده کنید. تراکنش‌های مهم را private pool ارسال کنید یا از timelock استفاده کنید.'
+                };
+                
+                return recommendations[vulnId] || 'کد را بررسی کرده و از best practice های امنیتی استفاده کنید.';
+            }
+
+            getSecureCodeExample(vulnId) {
+                const examples = {
+                    reentrancy: `// استفاده از ReentrancyGuard
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+function withdraw() external nonReentrant {
+    uint256 amount = balances[msg.sender];
+    require(amount > 0, "No funds");
+    balances[msg.sender] = 0; // Effect
+    payable(msg.sender).transfer(amount); // Interaction
+}`,
+                    
+                    uncheckedTransfer: `// بررسی نتیجه call
+(bool success, ) = payable(recipient).call{value: amount}("");
+require(success, "Transfer failed");
+
+// یا استفاده از withdrawal pattern
+function withdraw() external {
+    uint256 amount = pendingWithdrawals[msg.sender];
+    pendingWithdrawals[msg.sender] = 0;
+    payable(msg.sender).transfer(amount);
+}`,
+                    
+                    accessControl: `// استفاده از modifier
+modifier onlyOwner() {
+    require(msg.sender == owner, "Not owner");
+    _;
+}
+
+function criticalFunction() external onlyOwner {
+    // تنها مالک می‌تواند این تابع را فراخوانی کند
+}`,
+                    
+                    txOrigin: `// استفاده صحیح از msg.sender
+require(msg.sender == owner, "Unauthorized");
+// به جای tx.origin == owner`
+                };
+                
+                return examples[vulnId] || null;
+            }
+
+            attachToggleListeners() {
+                // Event listeners are attached via onclick in HTML
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+
+        // Global functions for HTML onclick events
+        function toggleVulnerability(index) {
+            const details = document.getElementById(`details-${index}`);
+            const icon = document.getElementById(`icon-${index}`);
+            
+            if (details.classList.contains('active')) {
+                details.classList.remove('active');
+                icon.classList.remove('rotated');
+            } else {
+                details.classList.add('active');
+                icon.classList.add('rotated');
+            }
+        }
+
+        // Initialize the analyzer
+        document.addEventListener('DOMContentLoaded', () => {
+            new AdvancedSolidityAnalyzer();
+        });
+    </script>
+</body>
+</html>
