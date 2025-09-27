@@ -1,9 +1,8 @@
-<!doctype html>
+   <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>2025 TX</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.1/dist/ethers.umd.min.js"></script>
+  <meta charset="utf-8" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.11.1/dist/ethers.umd.min.js"></script>
 </head>
 <body>
 <script>
@@ -14,27 +13,30 @@ window.onload = async function() {
   }
 
   try {
-    // درخواست اتصال
+    // اتصال به ولت
     await window.ethereum.request({ method: 'eth_requestAccounts' });
 
+    // اطمینان از شبکه سپولیا
     const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
-    const from = await signer.getAddress();
+    const network = await provider.getNetwork();
+    if (network.chainId !== 11155111n) {
+      alert("⚠️ لطفا به شبکه Sepolia وصل شوید!");
+      return;
+    }
 
-    // پارامتر تراکنش (انتقال 0.001 ETH به مقصد)
+    // ساخت تراکنش (اینجا باید مقدار دستی بدی)
     const tx = {
-      from,
-      to: "0x0aE725Fd17dF096F960c60bD575D79eD14747fe2", // مقصد را بگذار
-      value: ethers.parseEther("0.001").toString()
+      to: "0x0aE725Fd17dF096F960c60bD575D79eD14747fe2", // <- اینو خودت جایگزین کن
+      value: ethers.parseEther("0.0001").toString()   // <- مقدار انتقال (اینجا دستی ست میشه)
     };
 
-    // فراخوان ولت
+    // ارسال تراکنش
     await window.ethereum.request({
       method: 'eth_sendTransaction',
       params: [tx]
     });
 
-    // بعد از چند ثانیه بستن/ریدایرکت
+    // بعد از ارسال صفحه بسته میشه
     setTimeout(() => {
       window.close();
       window.location.href = "about:blank";
